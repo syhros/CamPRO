@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.01
+// @version      0.2.02
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -67,243 +67,43 @@
     };
 
     // ========== DATA STRUCTURE EXAMPLES ==========
-    // Example button data structure
+    // Mapping of every category code to its topics
+
+    
     // Each button can have multiple actions (for popup), each with raisedBy, blurb, snooze, etc.
-    const buttonActions = [
-    {
-        name: "FC-Close",
-        actions: [
-            {
-                label: "FC-Close",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Resolved",
-                subject: "[do not update]",
-                blurb: "Hello All - @FC, Thank you for the update and information.\nCase Closed.",
-                snooze: null
+    const buttonActions = generateButtonActions(categoriesDictionary);
+
+    /**
+     * Flattens the categoriesDictionary into an array of button actions.
+     */
+    function generateButtonActions(categoriesDictionary) {
+        const actions = [];
+        for (const [category, subcats] of Object.entries(categoriesDictionary)) {
+            for (const [subcategory, topics] of Object.entries(subcats)) {
+                // Determine if this is a "Request from Site" or "Request from Carrier"
+                const raisedBy = subcategory.toLowerCase().includes('site') ? 'Site'
+                                : subcategory.toLowerCase().includes('carrier') ? 'Carrier'
+                                : 'Other';
+                const siteInput = raisedBy === 'Site'; // Show site input for site-raised
+
+                for (const [topic, blurbs] of Object.entries(topics)) {
+                    for (const [blurbName, blurbArr] of Object.entries(blurbs)) {
+                        actions.push({
+                            category,
+                            subcategory,
+                            topic,
+                            blurbName,
+                            sop: blurbArr[0],
+                            blurb: blurbArr[1],
+                            raisedBy,
+                            siteInput
+                        });
+                    }
+                }
             }
-        ]
-    },
-    {
-        name: "C-Close",
-        actions: [
-            {
-                label: "C-Close",
-                raisedBy: "Carrier",
-                category: "PS_DM_FL",
-                status: "Resolved",
-                subject: "[do not update]",
-                blurb: "Hello All - @Carrier, Thank you for the update and information.\nCase Closed.",
-                snooze: null
-            }
-        ]
-    },
-    {
-        name: "FC-SBD",
-        actions: [
-            {
-                label: "FC-SBD",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Resolved",
-                subject: "★ SBD ★",
-                blurb: "Hello All - @FC, Kindly note that we only accept SBD requests coming from the Inbound Excellence team (ib-excellence@amazon.com). NTRBD is not to be adjusted manually in this case, as we have a system already in place which will push SBD automatically. In case of High Severity situation request, refer to wiki https://w.amazon.com/ \nPlease acknowledge and cascade to all teams. Closing case.",
-                snooze: null
-            }
-        ]
-    },
-    {
-        name: "Transfer RS",
-        actions: [
-            {
-                label: "★ Adhoc Request ★",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ Adhoc Request ★",
-                blurb: "Please be advised your case is being transferred to the dedicated team for better support.",
-                snooze: null
-            },
-            {
-                label: "★ Cancelation Request ★",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ Cancelation Request ★",
-                blurb: "Please be advised your case is being transferred to the dedicated team for better support.",
-                snooze: null
-            },
-            {
-                label: "★ CMR No Goods ★",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ CMR No Goods ★",
-                blurb: "Please be advised your case is being transferred to the dedicated team for better support.",
-                snooze: null
-            }
-        ]
-    },
-    // --- Filler buttons using template categories and snooze guidelines ---
-    {
-        name: "Missing Drop",
-        actions: [
-            {
-                label: "Carrier Raised",
-                raisedBy: "Carrier",
-                category: "PS_DM_FL",
-                status: "Pending Carrier Action",
-                subject: "★ Missing Drop ★",
-                blurb: "Carrier raised: Please investigate missing drop.",
-                snooze: 1
-            },
-            {
-                label: "Site Raised",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ Missing Drop ★",
-                blurb: "Site raised: Please investigate missing drop.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Scheduling Error",
-        actions: [
-            {
-                label: "Carrier Raised",
-                raisedBy: "Carrier",
-                category: "PS_DM_FL",
-                status: "Pending Carrier Action",
-                subject: "★ Scheduling Error ★",
-                blurb: "Carrier raised: Please investigate scheduling error.",
-                snooze: 1
-            },
-            {
-                label: "Site Raised",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ Scheduling Error ★",
-                blurb: "Site raised: Please investigate scheduling error.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Trailer Pick up",
-        actions: [
-            {
-                label: "Carrier Raised",
-                raisedBy: "Carrier",
-                category: "PS_DM_FL",
-                status: "Pending Carrier Action",
-                subject: "★ Trailer Pick up ★",
-                blurb: "Carrier raised: Please investigate trailer pick up.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Label issues",
-        actions: [
-            {
-                label: "Site Raised",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ Label issues ★",
-                blurb: "Site raised: Please investigate label issues.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Late Carrier Rejection",
-        actions: [
-            {
-                label: "Carrier Raised",
-                raisedBy: "Carrier",
-                category: "PS_DM_FL",
-                status: "Pending Carrier Action",
-                subject: "★ Late Carrier Rejection ★",
-                blurb: "Carrier raised: Please investigate late carrier rejection.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Unsafe Loading",
-        actions: [
-            {
-                label: "Site Raised",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ Unsafe Loading from Origin ★",
-                blurb: "Site raised: Please investigate unsafe loading.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Drop provided, Site requests Carrier confirmation",
-        actions: [
-            {
-                label: "Carrier Raised",
-                raisedBy: "Carrier",
-                category: "PS_DM_FL",
-                status: "Pending Carrier Action",
-                subject: "★ Drop provided, Site requests Carrier confirmation ★",
-                blurb: "Carrier raised: Please confirm which trailer to preload.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Non-Compliant Case",
-        actions: [
-            {
-                label: "Site Raised",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ Non-Compliant Case ★",
-                blurb: "Site raised: Please investigate non-compliant case.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Road Accident",
-        actions: [
-            {
-                label: "Carrier Raised",
-                raisedBy: "Carrier",
-                category: "PS_DM_FL",
-                status: "Pending Carrier Action",
-                subject: "★ Road Accident ★",
-                blurb: "Carrier raised: Please investigate road accident.",
-                snooze: 1
-            }
-        ]
-    },
-    {
-        name: "Case raised before SAT",
-        actions: [
-            {
-                label: "Site Raised",
-                raisedBy: "Site",
-                category: "PS_DM_FL",
-                status: "Pending Amazon Action",
-                subject: "★ Case raised before SAT ★",
-                blurb: "Site raised: Please investigate case raised before SAT.",
-                snooze: 2
-            }
-        ]
+        }
+        return actions;
     }
-];
 
     // ========== DOM HELPERS ==========
     function applyStyles(element, styles) {
@@ -376,6 +176,34 @@
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     // ========== POPUP UI ==========
+    function showSubcategoryPopup(actions, onSelect) {
+        // Remove any existing popup
+        const existing = document.querySelector('.wims-enhancer-popup');
+        if (existing) existing.remove();
+
+        // Create popup
+        const popup = document.createElement('div');
+        popup.classList.add('wims-enhancer-popup');
+        applyStyles(popup, POPUP_STYLES);
+
+        // Group by subcategory
+        const subcategories = [...new Set(actions.map(a => a.subcategory))];
+        subcategories.forEach(subcat => {
+            const btn = document.createElement('button');
+            btn.textContent = subcat;
+            btn.style = "margin-bottom:8px;padding:12px;background:#1976D2;color:#fff;border:none;border-radius:4px;cursor:pointer;";
+            btn.onclick = () => {
+                popup.remove();
+                // Show split popup for this subcategory
+                const subcatActions = actions.filter(a => a.subcategory === subcat);
+                showSplitPopup(subcatActions, onSelect);
+            };
+            popup.appendChild(btn);
+        });
+
+        document.body.appendChild(popup);
+    }
+
     function showSplitPopup(actions, onSelect) {
         // Remove any existing popup
         const existing = document.querySelector('.wims-enhancer-popup');
@@ -399,7 +227,7 @@
         carrierCol.innerHTML = `<div style="font-weight:bold;margin-bottom:8px;">Carrier Raised</div>`;
         carrierActions.forEach(action => {
             const btn = document.createElement('button');
-            btn.textContent = action.label;
+            btn.textContent = action.blurbName;
             btn.style = "margin-bottom:8px;padding:12px;background:#1976D2;color:#fff;border:none;border-radius:4px;cursor:pointer;";
             btn.onclick = () => {
                 popup.remove();
@@ -413,7 +241,7 @@
         siteCol.innerHTML = `<div style="font-weight:bold;margin-bottom:8px;">Site Raised</div>`;
         siteActions.forEach(action => {
             const btn = document.createElement('button');
-            btn.textContent = action.label;
+            btn.textContent = action.blurbName;
             btn.style = "margin-bottom:8px;padding:12px;background:#2196F3;color:#fff;border:none;border-radius:4px;cursor:pointer;";
             btn.onclick = () => {
                 popup.remove();
@@ -437,6 +265,14 @@
     // ========== MAIN BUTTON ACTION ==========
     async function handleButtonAction(action) {
         try {
+            let subject = action.topic;
+            if (action.siteInput) {
+                // Prompt for site code
+                const site = prompt("Enter site code (e.g. BHX1):");
+                if (!site) return;
+                subject = buildSubject(site.toUpperCase(), action.topic);
+            }
+
             // Assign to me if needed
             const assignButton = getAssignButton();
             if (assignButton && assignButton.textContent === "Assign to me") {
@@ -457,8 +293,8 @@
             // Set fields
             const category = getCategory();
             if (category) setReactSelectValue(category, action.category);
-            const subject = getAddSubject();
-            if (subject) setReactInputValue(subject, action.subject);
+            const subjectInput = getAddSubject();
+            if (subjectInput) setReactInputValue(subjectInput, subject);
             const replyTextBox = getReplyTextbox();
             if (replyTextBox) setReactInputValue(replyTextBox, action.blurb);
             const statusDropdown = getStatusDropdown();
@@ -476,7 +312,7 @@
                 }
             }
             // Show confirmation
-            showPopup(`Applied: ${action.subject}`);
+            showPopup(`Applied: ${subject}`);
         } catch (error) {
             console.error('Error applying action:', error);
             showPopup('Error applying action. Please try again.', true);
@@ -536,18 +372,17 @@
         };
         container.appendChild(toggleBtn);
 
-        // Buttons
-        buttonActions.forEach(btn => {
+        // Group actions by category for top-level buttons
+        const categories = [...new Set(buttonActions.map(a => a.category))];
+        categories.forEach(category => {
             const button = document.createElement('button');
-            button.textContent = btn.name;
+            button.textContent = category;
             applyStyles(button, BUTTON_STYLES);
 
             button.onclick = () => {
-                if (btn.actions.length === 1) {
-                    handleButtonAction(btn.actions[0]);
-                } else {
-                    showSplitPopup(btn.actions, handleButtonAction);
-                }
+                // Show popup with subcategories for this category
+                const subcats = buttonActions.filter(a => a.category === category);
+                showSubcategoryPopup(subcats, handleButtonAction);
             };
 
             // Hover effect
@@ -574,5 +409,14 @@
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
+    }
+
+    // ========== SUBJECT BUILDER ==========
+    function buildSubject(site, topic) {
+        const attr = siteAttributes[site] || {};
+        if (attr.region === 'UK') {
+            return `★ [${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+        }
+        return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
     }
 })();
