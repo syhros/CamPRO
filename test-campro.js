@@ -1,12 +1,14 @@
 // ==UserScript==
-// @name         Enhanced WIMS Interface
+// @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.2.01
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
 // @grant        none
 // @run-at       document-end
+// @updateURL    https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/test-campro.js
+// @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/test-campro.js
 // ==/UserScript==
 
 (function() {
@@ -68,45 +70,240 @@
     // Example button data structure
     // Each button can have multiple actions (for popup), each with raisedBy, blurb, snooze, etc.
     const buttonActions = [
-        {
-            name: "Missing Drop",
-            actions: [
-                {
-                    label: "12-6h to SAT",
-                    raisedBy: "Carrier",
-                    category: "PS_DM_FL",
-                    status: "Pending Carrier Action",
-                    subject: "★ Missing Drop ★",
-                    blurb: "Carrier raised: Please investigate missing drop.",
-                    snooze: 1 // hours
-                },
-                {
-                    label: "12-6h to SAT",
-                    raisedBy: "Site",
-                    category: "PS_DM_FL",
-                    status: "Pending Amazon Action",
-                    subject: "★ Missing Drop ★",
-                    blurb: "Site raised: Please investigate missing drop.",
-                    snooze: 1 // hours
-                }
-            ]
-        },
-        {
-            name: "Close Case",
-            actions: [
-                {
-                    label: "Standard Close",
-                    raisedBy: "Site",
-                    category: "PS_DM_FL",
-                    status: "Resolved",
-                    subject: "★ Case Resolved ★",
-                    blurb: "Thank you for the updates, closing case.\n\nPlease reopen if any further support is required.",
-                    snooze: null
-                }
-            ]
-        },
-        // ...add more buttons/actions as needed...
-    ];
+    {
+        name: "FC-Close",
+        actions: [
+            {
+                label: "FC-Close",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Resolved",
+                subject: "[do not update]",
+                blurb: "Hello All - @FC, Thank you for the update and information.\nCase Closed.",
+                snooze: null
+            }
+        ]
+    },
+    {
+        name: "C-Close",
+        actions: [
+            {
+                label: "C-Close",
+                raisedBy: "Carrier",
+                category: "PS_DM_FL",
+                status: "Resolved",
+                subject: "[do not update]",
+                blurb: "Hello All - @Carrier, Thank you for the update and information.\nCase Closed.",
+                snooze: null
+            }
+        ]
+    },
+    {
+        name: "FC-SBD",
+        actions: [
+            {
+                label: "FC-SBD",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Resolved",
+                subject: "★ SBD ★",
+                blurb: "Hello All - @FC, Kindly note that we only accept SBD requests coming from the Inbound Excellence team (ib-excellence@amazon.com). NTRBD is not to be adjusted manually in this case, as we have a system already in place which will push SBD automatically. In case of High Severity situation request, refer to wiki https://w.amazon.com/ \nPlease acknowledge and cascade to all teams. Closing case.",
+                snooze: null
+            }
+        ]
+    },
+    {
+        name: "Transfer RS",
+        actions: [
+            {
+                label: "★ Adhoc Request ★",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ Adhoc Request ★",
+                blurb: "Please be advised your case is being transferred to the dedicated team for better support.",
+                snooze: null
+            },
+            {
+                label: "★ Cancelation Request ★",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ Cancelation Request ★",
+                blurb: "Please be advised your case is being transferred to the dedicated team for better support.",
+                snooze: null
+            },
+            {
+                label: "★ CMR No Goods ★",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ CMR No Goods ★",
+                blurb: "Please be advised your case is being transferred to the dedicated team for better support.",
+                snooze: null
+            }
+        ]
+    },
+    // --- Filler buttons using template categories and snooze guidelines ---
+    {
+        name: "Missing Drop",
+        actions: [
+            {
+                label: "Carrier Raised",
+                raisedBy: "Carrier",
+                category: "PS_DM_FL",
+                status: "Pending Carrier Action",
+                subject: "★ Missing Drop ★",
+                blurb: "Carrier raised: Please investigate missing drop.",
+                snooze: 1
+            },
+            {
+                label: "Site Raised",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ Missing Drop ★",
+                blurb: "Site raised: Please investigate missing drop.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Scheduling Error",
+        actions: [
+            {
+                label: "Carrier Raised",
+                raisedBy: "Carrier",
+                category: "PS_DM_FL",
+                status: "Pending Carrier Action",
+                subject: "★ Scheduling Error ★",
+                blurb: "Carrier raised: Please investigate scheduling error.",
+                snooze: 1
+            },
+            {
+                label: "Site Raised",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ Scheduling Error ★",
+                blurb: "Site raised: Please investigate scheduling error.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Trailer Pick up",
+        actions: [
+            {
+                label: "Carrier Raised",
+                raisedBy: "Carrier",
+                category: "PS_DM_FL",
+                status: "Pending Carrier Action",
+                subject: "★ Trailer Pick up ★",
+                blurb: "Carrier raised: Please investigate trailer pick up.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Label issues",
+        actions: [
+            {
+                label: "Site Raised",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ Label issues ★",
+                blurb: "Site raised: Please investigate label issues.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Late Carrier Rejection",
+        actions: [
+            {
+                label: "Carrier Raised",
+                raisedBy: "Carrier",
+                category: "PS_DM_FL",
+                status: "Pending Carrier Action",
+                subject: "★ Late Carrier Rejection ★",
+                blurb: "Carrier raised: Please investigate late carrier rejection.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Unsafe Loading",
+        actions: [
+            {
+                label: "Site Raised",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ Unsafe Loading from Origin ★",
+                blurb: "Site raised: Please investigate unsafe loading.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Drop provided, Site requests Carrier confirmation",
+        actions: [
+            {
+                label: "Carrier Raised",
+                raisedBy: "Carrier",
+                category: "PS_DM_FL",
+                status: "Pending Carrier Action",
+                subject: "★ Drop provided, Site requests Carrier confirmation ★",
+                blurb: "Carrier raised: Please confirm which trailer to preload.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Non-Compliant Case",
+        actions: [
+            {
+                label: "Site Raised",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ Non-Compliant Case ★",
+                blurb: "Site raised: Please investigate non-compliant case.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Road Accident",
+        actions: [
+            {
+                label: "Carrier Raised",
+                raisedBy: "Carrier",
+                category: "PS_DM_FL",
+                status: "Pending Carrier Action",
+                subject: "★ Road Accident ★",
+                blurb: "Carrier raised: Please investigate road accident.",
+                snooze: 1
+            }
+        ]
+    },
+    {
+        name: "Case raised before SAT",
+        actions: [
+            {
+                label: "Site Raised",
+                raisedBy: "Site",
+                category: "PS_DM_FL",
+                status: "Pending Amazon Action",
+                subject: "★ Case raised before SAT ★",
+                blurb: "Site raised: Please investigate case raised before SAT.",
+                snooze: 2
+            }
+        ]
+    }
+];
 
     // ========== DOM HELPERS ==========
     function applyStyles(element, styles) {
