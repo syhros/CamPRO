@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.07
+// @version      0.2.08
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
 // @grant        none
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/test-campro.js
-// @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/test-campro.js
+// @updateURL    https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
+// @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
 (function() {
