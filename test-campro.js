@@ -3447,7 +3447,10 @@
                 "Drop provided on time": {
                     "Carrier Informs Drop has been provided": [
                         "Paste Blurb",
-                        "Hello Carrier,\n Please note that this case is not required and instead you can update the VRID comment/note as follows: \n\u00a0\nTrailer ID XXX dropped on ORIGIN SITE at 00:00 AM/PM on XX/XX/2025.\n"
+                        "Hello Carrier,\n Please note that this case is not required and instead you can update the VRID comment/note as follows: \n\u00a0\nTrailer ID XXX dropped on ORIGIN SITE at 00:00 AM/PM on XX/XX/2025.\n",
+                        {
+                            status: "Resolved"
+                        }
                     ]
                 },
                 "Drop provided on time and site rejected": {
@@ -4405,36 +4408,41 @@
     const buttonActions = generateButtonActions(categoriesDictionary);
 
     /**
-     * Flattens the categoriesDictionary into an array of button actions.
+     * Flattens the categoriesDictionary into an array of button actions
      */
     function generateButtonActions(categoriesDictionary) {
         const actions = [];
         for (const [category, subcats] of Object.entries(categoriesDictionary)) {
-            for (const [subcategory, topics] of Object.entries(subcats)) {
-                // Determine if this is a "Request from Site" or "Request from Carrier"
+           for (const [subcategory, topics] of Object.entries(subcats)) {
                 const raisedBy = subcategory.toLowerCase().includes('site') ? 'Site'
                                 : subcategory.toLowerCase().includes('carrier') ? 'Carrier'
                                 : 'Other';
-                const siteInput = raisedBy === 'Site'; // Show site input for site-raised
+                const siteInput = raisedBy === 'Site';
 
                 for (const [topic, blurbs] of Object.entries(topics)) {
-                    for (const [blurbName, blurbArr] of Object.entries(blurbs)) {
+                   for (const [blurbName, blurbData] of Object.entries(blurbs)) {
+                        // Check if blurbData contains settings object as third element
+                        const settings = blurbData[2] || {};
+                    
                         actions.push({
                             category,
                             subcategory,
-                            topic,
-                            blurbName,
-                            sop: blurbArr[0],
-                            blurb: blurbArr[1],
-                            raisedBy,
-                            siteInput
-                        });
-                    }
+                        topic,
+                        blurbName,
+                        sop: blurbData[0],
+                        blurb: blurbData[1],
+                        raisedBy,
+                        siteInput,
+                        // Add optional settings
+                        snooze: settings.snooze || null,
+                        status: settings.status || null
+                    });
                 }
             }
         }
-        return actions;
     }
+    return actions;
+}
 
     // ========== DOM HELPERS ==========
     function applyStyles(element, styles) {
@@ -4687,48 +4695,113 @@
     }
 
     // ========== UI CREATION ==========
-    function createButtonContainer() {
-        const container = document.createElement('div');
-        applyStyles(container, CONTAINER_STYLES);
+function searchActions(query) {
+    if (!query) return [];
+    
+    query = query.toLowerCase();
+    return buttonActions.filter(action => {
+        return action.category.toLowerCase().includes(query) ||
+               action.subcategory.toLowerCase().includes(query) ||
+               action.topic.toLowerCase().includes(query) ||
+               action.blurbName.toLowerCase().includes(query) ||
+               action.sop.toLowerCase().includes(query) ||
+               action.blurb.toLowerCase().includes(query);
+    });
+}
+    
+function createButtonContainer() {
+    const container = document.createElement('div');
+    applyStyles(container, CONTAINER_STYLES);
 
-        // Hide/show toggle
-        const toggleBtn = document.createElement('button');
-        toggleBtn.textContent = '▲';
-        toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
-        let hidden = false;
-        toggleBtn.onclick = () => {
-            hidden = !hidden;
-            container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
-            toggleBtn.textContent = hidden ? '▼' : '▲';
+    // Add search box
+    const searchBox = document.createElement('input');
+    searchBox.type = 'text';
+    searchBox.placeholder = 'Search categories, topics, blurbs...';
+    Object.assign(searchBox.style, {
+        width: '100%',
+        padding: '8px',
+        marginBottom: '10px',
+        border: '1px solid #444',
+        borderRadius: '4px',
+        background: '#333',
+        color: '#fff'
+    });
+
+    // Create buttons container
+    const buttonsContainer = document.createElement('div');
+    Object.assign(buttonsContainer.style, {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '8px'
+    });
+
+    // Search functionality
+    let searchTimeout;
+    searchBox.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const query = e.target.value;
+            
+            // Clear existing buttons
+            buttonsContainer.innerHTML = '';
+            
+            if (!query) {
+                // Show category buttons if no search
+                const categories = [...new Set(buttonActions.map(a => a.category))];
+                categories.forEach(category => {
+                    const button = document.createElement('button');
+                    button.textContent = category;
+                    applyStyles(button, BUTTON_STYLES);
+                    button.onclick = () => {
+                        const subcats = buttonActions.filter(a => a.category === category);
+                        showSubcategoryPopup(subcats, handleButtonAction);
+                    };
+                    buttonsContainer.appendChild(button);
+                });
+            } else {
+                // Show search results
+                const results = searchActions(query);
+                results.forEach(action => {
+                    const button = document.createElement('button');
+                    button.textContent = `${action.category} > ${action.subcategory} > ${action.blurbName}`;
+                    applyStyles(button, BUTTON_STYLES);
+                    button.onclick = () => handleButtonAction(action);
+                    buttonsContainer.appendChild(button);
+                });
+            }
+        }, 300); // Debounce search for performance
+    });
+
+    // Hide/show toggle
+    const toggleBtn = document.createElement('button');
+    toggleBtn.textContent = '▲';
+    toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
+    let hidden = false;
+    toggleBtn.onclick = () => {
+        hidden = !hidden;
+        container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
+        toggleBtn.textContent = hidden ? '▼' : '▲';
+    };
+
+    container.appendChild(toggleBtn);
+    container.appendChild(searchBox);
+    container.appendChild(buttonsContainer);
+
+    // Initialize with category buttons
+    const categories = [...new Set(buttonActions.map(a => a.category))];
+    categories.forEach(category => {
+        const button = document.createElement('button');
+        button.textContent = category;
+        applyStyles(button, BUTTON_STYLES);
+        button.onclick = () => {
+            const subcats = buttonActions.filter(a => a.category === category);
+            showSubcategoryPopup(subcats, handleButtonAction);
         };
-        container.appendChild(toggleBtn);
+        buttonsContainer.appendChild(button);
+    });
 
-        // Group actions by category for top-level buttons
-        const categories = [...new Set(buttonActions.map(a => a.category))];
-        categories.forEach(category => {
-            const button = document.createElement('button');
-            button.textContent = category;
-            applyStyles(button, BUTTON_STYLES);
-
-            button.onclick = () => {
-                // Show popup with subcategories for this category
-                const subcats = buttonActions.filter(a => a.category === category);
-                showSubcategoryPopup(subcats, handleButtonAction);
-            };
-
-            // Hover effect
-            button.addEventListener('mouseover', () => {
-                button.style.backgroundColor = '#1976D2';
-            });
-            button.addEventListener('mouseout', () => {
-                button.style.backgroundColor = '#2196F3';
-            });
-
-            container.appendChild(button);
-        });
-
-        document.body.appendChild(container);
-    }
+    document.body.appendChild(container);
+}
 
     // ========== INIT ==========
     function init() {
