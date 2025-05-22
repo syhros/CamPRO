@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.09
+// @version      0.2.011
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
 // @grant        none
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
-// @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
+// @updateURL    https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/test-campro.js
+// @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/test-campro.js
 // ==/UserScript==
 
 (function() {
@@ -4694,7 +4694,7 @@
         }, 2000);
     }
 
-    // ========== UI CREATION ==========
+// ========== UI CREATION ==========
 function searchActions(query) {
     if (!query) return [];
     
@@ -4739,26 +4739,12 @@ function createButtonContainer() {
     });
 
     // Search functionality
-    function searchActions(query) {
-        if (!query) return [];
-    
-        const searchTerms = query.toLowerCase().split(' ');
-    
-        return buttonActions.filter(action => {
-            const searchableText = [
-                action.category,
-                action.subcategory,
-                action.topic,
-                action.blurbName,
-                action.sop,
-                action.blurb
-            ].map(text => text?.toLowerCase() || '').join(' ');
-
-        // All search terms must be found in the searchable text
-        return searchTerms.every(term => searchableText.includes(term));
-        });
-    }
-            
+    searchBox.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        let searchTimeout;
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
             // Clear existing buttons
             buttonsContainer.innerHTML = '';
             
@@ -4820,24 +4806,23 @@ function createButtonContainer() {
     document.body.appendChild(container);
 }
 
-    // ========== INIT ==========
-    function init() {
-        createButtonContainer();
-        console.log('Enhanced WIMS Interface: Initialized');
-    }
+// ========== INIT ==========
+function init() {
+    createButtonContainer();
+    console.log('Enhanced WIMS Interface: Initialized');
+}
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
-    // ========== SUBJECT BUILDER ==========
-    function buildSubject(site, topic) {
-        const attr = siteAttributes[site] || {};
-        if (attr.region === 'UK') {
-            return `★ [${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
-        }
-        return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+// ========== SUBJECT BUILDER ==========
+function buildSubject(site, topic) {
+    const attr = siteAttributes[site] || {};
+    if (attr.region === 'UK') {
+        return `★ [${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
     }
-})();
+    return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+}
