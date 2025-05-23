@@ -11,6 +11,8 @@
 // @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
+// 0.20.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
+
 (function() {
     'use strict';
 
@@ -4610,6 +4612,8 @@
                 const site = prompt("Enter site code (e.g. BHX1):");
                 if (!site) return;
                 subject = buildSubject(site.toUpperCase(), action.topic);
+            } else {
+                subject = `★ [${action.topic}] ★`;
             }
 
             // Assign to me if needed
