@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.015
+// @version      0.2.016
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -12,6 +12,7 @@
 // ==/UserScript==
 
 // 0.20.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
+// 0.20.016 - Snooze button added
 
 (function() {
     'use strict';
@@ -4493,6 +4494,11 @@
         const doc = getAddSubjectIframeDoc();
         return doc ? getElement(doc, "//a[text()='Case Reply']") : null;
     }
+    function getFollowUpButton() {
+        const addSubjectIframeDoc = getAddSubjectIframeDoc();
+
+        return getElement(addSubjectIframeDoc, "//a[text()='Case Follow Up']");
+    };
 
     // ========== REACT INPUT HELPERS ==========
     function setReactInputValue(input, value) {
@@ -4742,30 +4748,45 @@ function createButtonContainer() {
     ];
 
     snoozeButtons.forEach(({ label, hours }) => {
-        const button = document.createElement('button');
-        button.textContent = label;
-        Object.assign(button.style, {
-            padding: '8px',
-            width: '40px', // Fixed width for square buttons
-            height: '40px',
-            background: '#444',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px'
-        });
-        button.onclick = () => {
-            const followUpDatetime = getFollowUpDatetime();
-            if (followUpDatetime) {
-                const date = new Date();
-                date.setTime(date.getTime() + hours * 60 * 60 * 1000);
-                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                setReactInputValue(followUpDatetime, formattedDate);
-            }
-        };
-        snoozeContainer.appendChild(button);
+    const button = document.createElement('button');
+    button.textContent = label;
+    Object.assign(button.style, {
+        padding: '8px',
+        width: '40px',
+        height: '40px',
+        background: '#444',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '14px'
     });
+    button.onclick = async () => {
+        // First click the reply box 
+        const replyToCase = getReplyToCase();
+        if (replyToCase) {
+            replyToCase.focus();
+            await delay(300); // Wait for field to register click
+        }
+
+        // Then click the Follow Up button
+        const followUpButton = getFollowUpButton();
+        if (followUpButton) {
+            followUpButton.click();
+            await delay(300); // Wait for follow up time field to appear
+        }
+
+        // Finally set the follow up datetime
+        const followUpDatetime = getFollowUpDatetime();
+        if (followUpDatetime) {
+            const date = new Date();
+            date.setTime(date.getTime() + hours * 60 * 60 * 1000);
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            setReactInputValue(followUpDatetime, formattedDate);
+        }
+    };
+    snoozeContainer.appendChild(button);
+});
 
     // Add search box
     const searchBox = document.createElement('input');
@@ -4790,9 +4811,9 @@ function createButtonContainer() {
         display: 'flex',
         flexWrap: 'wrap',
         gap: '8px',
-        maxHeight: '300px', // Set maximum height
-        overflowY: 'auto', // Enable vertical scroll
-        overflowX: 'hidden' // Hide horizontal scroll
+        maxHeight: '70px', 
+        overflowY: 'auto', 
+        overflowX: 'hidden'
     });
 
     // Update button styles to have minimum width
