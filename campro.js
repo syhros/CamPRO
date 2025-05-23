@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016
+// @version      0.2.016.5
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -13,6 +13,7 @@
 
 // 0.20.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases
 // 0.20.016 - Snooze button added
+// 0.2.016.5 - Minor snooze button update
 
 (function() {
     'use strict';
@@ -4750,7 +4751,7 @@ function createButtonContainer() {
     snoozeButtons.forEach(({ label, hours }) => {
     const button = document.createElement('button');
     button.textContent = label;
-    button.title = 'Set to Case follow up + adds ${label} Snooze time';
+    button.title = `Set to Case follow up + adds ${label} Snooze time`;
     Object.assign(button.style, {
         padding: '8px',
         width: '40px',
