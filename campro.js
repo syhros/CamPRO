@@ -4801,9 +4801,6 @@ function createButtonContainer() {
     container.appendChild(searchBox);
     container.appendChild(buttonsContainer);
 
-    // Insert container before the reply input
-    replyInput.parentElement.insertBefore(container, replyInput);
-
     // Hide/show toggle
     const toggleBtn = document.createElement('button');
     toggleBtn.textContent = '▲';
@@ -4826,26 +4823,8 @@ function createButtonContainer() {
         }
     });
 
-    container.appendChild(snoozeContainer);
-    container.appendChild(toggleBtn);
-    container.appendChild(searchBox);
-    container.appendChild(buttonsContainer);
-    document.body.appendChild(container);
-
-    // Initialize with category buttons
-    const categories = [...new Set(buttonActions.map(a => a.category))];
-    categories.forEach(category => {
-        const button = document.createElement('button');
-        button.textContent = category;
-        applyStyles(button, BUTTON_STYLES);
-        button.onclick = () => {
-            const subcats = buttonActions.filter(a => a.category === category);
-            showSubcategoryPopup(subcats, handleButtonAction);
-        };
-        buttonsContainer.appendChild(button);
-    });
-
-    document.body.appendChild(container);
+    // Insert container before the reply input
+    replyInput.parentElement.insertBefore(container, replyInput);
 }
 
 // ========== INIT ==========
