@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.22
+// @version      0.2.016.23
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -15,7 +15,8 @@
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
 // 0.2.016.7- 0.2.016.19 - UI & Search Improvements & Original button removal
-// 0.2.016.22 - Revered 0.2.016.20
+// 0.2.016.21 - Reverted 0.2.016.20
+// 0.2.016.23 - Toggle button fixed
 
 (function() {
     'use strict';
@@ -4500,7 +4501,6 @@
     }
     function getFollowUpButton() {
         const addSubjectIframeDoc = getAddSubjectIframeDoc();
-
         return getElement(addSubjectIframeDoc, "//a[text()='Case Follow Up']");
     };
 
@@ -4651,6 +4651,10 @@ function searchActions(query) {
     
 function createButtonContainer() {
     // Create the main container
+    // Reply input element to position relative to
+    const replyInput = getReplyToCase();
+    if (!replyInput) return;
+    
     const container = document.createElement('div');
     applyStyles(container, CONTAINER_STYLES);
 
@@ -4659,8 +4663,10 @@ function createButtonContainer() {
     Object.assign(snoozeContainer.style, {
         display: 'flex',
         justifyContent: 'center',
-        gap: '4px',
-        marginBottom: '10px'
+        gap: '6px',
+        marginBottom: '10px',
+        paddingLeft: '10px',
+        paddingTop: '10px'
     });
 
     // Add snooze buttons
@@ -4720,7 +4726,7 @@ function createButtonContainer() {
     searchBox.type = 'text';
     searchBox.placeholder = 'Search categories, topics, blurbs...';
     Object.assign(searchBox.style, {
-        width: '50%',
+        width: '40%',
         minWidth: '25%',
         padding: '8px 12px',
         border: '1px solid #444',
@@ -4740,7 +4746,7 @@ function createButtonContainer() {
         display: 'flex',
         flexDirection: 'column-reverse', 
         gap: '4px',
-        width: '50%', 
+        width: '40%', 
         maxHeight: '160px',
         overflowY: 'auto',
         overflowX: 'hidden',
@@ -4792,7 +4798,19 @@ function createButtonContainer() {
     // Hide/show toggle
     const toggleBtn = document.createElement('button');
     toggleBtn.textContent = '▲';
-    toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
+    Object.assign(toggleBtn.style, {
+        position: 'absolute',
+        right: '8px',
+        top: '-28px', // Move it above the container
+        background: '#444',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '0 0 6px 6px',
+        padding: '4px 12px',
+        cursor: 'pointer',
+        zIndex: '10001'
+    });
+
     let hidden = false;
     toggleBtn.onclick = () => {
         hidden = !hidden;
