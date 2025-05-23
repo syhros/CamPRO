@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.19
+// @version      0.2.016.20
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -15,6 +15,7 @@
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
 // 0.2.016.7- 0.2.016.19 - UI & Search Improvements & Original button removal
+// 0.2.016.20 - Moving snooze button to reply section. 
 
 (function() {
     'use strict';
@@ -4499,7 +4500,6 @@
     }
     function getFollowUpButton() {
         const addSubjectIframeDoc = getAddSubjectIframeDoc();
-
         return getElement(addSubjectIframeDoc, "//a[text()='Case Follow Up']");
     };
 
@@ -4650,14 +4650,27 @@ function searchActions(query) {
     
 function createButtonContainer() {
     // Create the main container
-    const container = document.createElement('div');
-    applyStyles(container, CONTAINER_STYLES);
+    // Reply input element to position relative to
+    const replyInput = getReplyToCase();
+    if (!replyInput) return;
 
-    // Create snooze container
+    // Create the main container and position it above the reply input
+    const container = document.createElement('div');
+    Object.assign(container.style, {
+        position: 'relative',
+        width: '100%', 
+        background: '#1f1f1f',
+        padding: '10px',
+        zIndex: '9998',
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.3)',
+        marginBottom: '10px' // Add space between container and reply input
+    });
+
+    // Add snooze buttons container
     const snoozeContainer = document.createElement('div');
     Object.assign(snoozeContainer.style, {
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: 'center', 
         gap: '4px',
         marginBottom: '10px'
     });
@@ -4673,46 +4686,46 @@ function createButtonContainer() {
     ];
 
     snoozeButtons.forEach(({ label, hours }) => {
-    const button = document.createElement('button');
-    button.textContent = label;
-    button.title = `Add ${label} hours`;
-    Object.assign(button.style, {
-        padding: '4px',
-        width: '30px',
-        height: '30px',
-        background: '#444',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '14px'
+        const button = document.createElement('button');
+        button.textContent = label;
+        button.title = `Add ${label} hours`;
+        Object.assign(button.style, {
+            padding: '4px',
+            width: '30px',
+            height: '30px', 
+            background: '#444',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+        });
+        button.onclick = async () => {
+            // First click the reply box
+            const replyToCase = getReplyToCase();
+            if (replyToCase) {
+                replyToCase.focus();
+                await delay(300);
+            }
+
+            // Then click Follow Up button 
+            const followUpButton = getFollowUpButton();
+            if (followUpButton) {
+                followUpButton.click();
+                await delay(300);
+            }
+
+            // Finally set the follow up datetime
+            const followUpDatetime = getFollowUpDatetime();
+            if (followUpDatetime) {
+                const date = new Date();
+                date.setTime(date.getTime() + hours * 60 * 60 * 1000);
+                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                setReactInputValue(followUpDatetime, formattedDate);
+            }
+        };
+        snoozeContainer.appendChild(button);
     });
-    button.onclick = async () => {
-        // First click the reply box 
-        const replyToCase = getReplyToCase();
-        if (replyToCase) {
-            replyToCase.focus();
-            await delay(300); // Wait for field to register click
-        }
-
-        // Then click the Follow Up button
-        const followUpButton = getFollowUpButton();
-        if (followUpButton) {
-            followUpButton.click();
-            await delay(300); // Wait for follow up time field to appear
-        }
-
-        // Finally set the follow up datetime
-        const followUpDatetime = getFollowUpDatetime();
-        if (followUpDatetime) {
-            const date = new Date();
-            date.setTime(date.getTime() + hours * 60 * 60 * 1000);
-            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-            setReactInputValue(followUpDatetime, formattedDate);
-        }
-    };
-    snoozeContainer.appendChild(button);
-});
 
     // Add search box
     const searchBox = document.createElement('input');
@@ -4720,39 +4733,34 @@ function createButtonContainer() {
     searchBox.placeholder = 'Search categories, topics, blurbs...';
     Object.assign(searchBox.style, {
         width: '50%',
-        minWidth: '25%',
         padding: '8px 12px',
         border: '1px solid #444',
         borderRadius: '4px',
-        background: '#333',
+        background: '#333', 
         color: '#fff',
-        marginLeft: 'auto',
-        marginRight: 'auto',
         height: '36px',
-        position: 'absolute',
-        right : '20px'
+        float: 'right',
+        marginBottom: '10px'
     });
 
-    // Create buttons container with horizontal scroll
+    // Create buttons container
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
-        flexDirection: 'column-reverse', 
+        flexDirection: 'column',
         gap: '4px',
-        width: '50%', 
+        width: '50%',
         maxHeight: '160px',
         overflowY: 'auto',
         overflowX: 'hidden',
-        marginTop: '-165px',
-        position: 'absolute', 
-        right: '20px',
-        bottom: '100%', 
         background: '#1f1f1f',
         borderRadius: '4px',
-        boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.3)',
+        float: 'right',
+        clear: 'right'
     });
 
-    // Update button styles to have minimum width
+    // Update button styles
     const UPDATED_BUTTON_STYLES = {
         ...BUTTON_STYLES,
         width: '100%',
@@ -4766,7 +4774,7 @@ function createButtonContainer() {
         textAlign: 'left'
     };
 
-    // Search functionality (keep existing search event listener)
+    // Search functionality
     searchBox.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         
@@ -4788,6 +4796,14 @@ function createButtonContainer() {
         }, 300);
     });
 
+    // Add components to container
+    container.appendChild(snoozeContainer);
+    container.appendChild(searchBox);
+    container.appendChild(buttonsContainer);
+
+    // Insert container before the reply input
+    replyInput.parentElement.insertBefore(container, replyInput);
+
     // Hide/show toggle
     const toggleBtn = document.createElement('button');
     toggleBtn.textContent = '▲';
@@ -4798,6 +4814,17 @@ function createButtonContainer() {
         container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
         toggleBtn.textContent = hidden ? '▼' : '▲';
     };
+
+    // Event listener for input focus
+    replyInput.addEventListener('focus', async () => {
+        // When input is focused, wait for the textarea to appear
+        await delay(300);
+        const replyTextBox = getReplyTextbox();
+        if (replyTextBox) {
+            // Move the container above the textarea
+            replyTextBox.parentElement.insertBefore(container, replyTextBox);
+        }
+    });
 
     container.appendChild(snoozeContainer);
     container.appendChild(toggleBtn);
