@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.13
+// @version      0.2.016.15
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -14,7 +14,7 @@
 // 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
-// 0.2.016.7- 0.2.016.13- UI & Search Improvements
+// 0.2.016.7- 0.2.016.15- UI & Search Improvements
 
 (function() {
     'use strict';
@@ -4744,14 +4744,14 @@ function createButtonContainer() {
     Object.assign(snoozeContainer.style, {
         display: 'flex',
         justifyContent: 'center',
-        gap: '8px',
+        gap: '4px',
         marginBottom: '10px'
     });
 
     // Add snooze buttons
     const snoozeButtons = [
-        { label: '15m', hours: 0.25 },
-        { label: '30m', hours: 0.5 },
+        { label: '15', hours: 0.25 },
+        { label: '30', hours: 0.5 },
         { label: '1h', hours: 1 },
         { label: '2h', hours: 2 },
         { label: '4h', hours: 4 },
@@ -4763,7 +4763,7 @@ function createButtonContainer() {
     button.textContent = label;
     button.title = `Add ${label} hours`;
     Object.assign(button.style, {
-        padding: '8px',
+        padding: '4px',
         width: '40px',
         height: '40px',
         background: '#444',
@@ -4805,7 +4805,7 @@ function createButtonContainer() {
     searchBox.type = 'text';
     searchBox.placeholder = 'Search categories, topics, blurbs...';
     Object.assign(searchBox.style, {
-        width: '25%',
+        width: '50%',
         minWidth: '25%',
         padding: '8px 12px',
         border: '1px solid #444',
@@ -4900,21 +4900,6 @@ function createButtonContainer() {
     container.appendChild(toggleBtn);
     container.appendChild(searchBox);
     container.appendChild(buttonsContainer);
-
-    // Initialize with category buttons
-    const categories = [...new Set(buttonActions.map(a => a.category))];
-    categories.forEach(category => {
-        const button = document.createElement('button');
-        button.textContent = category;
-        applyStyles(button, BUTTON_STYLES);
-        button.onclick = () => {
-            const subcats = buttonActions.filter(a => a.category === category);
-            showSubcategoryPopup(subcats, handleButtonAction);
-        };
-        buttonsContainer.appendChild(button);
-    });
-
-    document.body.appendChild(container);
 }
 
 // ========== INIT ==========
