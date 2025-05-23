@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.9
+// @version      0.2.016.10
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -14,7 +14,7 @@
 // 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
-// 0.2.016.7- - UI Improvements
+// 0.2.016.7- 0.2.016.10- UI & Search Improvements
 
 (function() {
     'use strict';
@@ -4717,6 +4717,20 @@ function searchActions(query) {
         ].map(text => (text || '').toLowerCase()).join(' ');
 
         return searchTerms.every(term => searchableText.includes(term));
+    }).sort((a, b) => {
+        // Sort by how many search terms match at the start of the text
+        const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
+        const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
+        
+        let aScore = 0;
+        let bScore = 0;
+        
+        searchTerms.forEach(term => {
+            if (aText.startsWith(term)) aScore++;
+            if (bText.startsWith(term)) bScore++;
+        });
+        
+        return bScore - aScore;
     });
 }
     
@@ -4801,17 +4815,16 @@ function createButtonContainer() {
         marginLeft: 'auto',
         marginRight: 'auto',
         display: 'block',
-        paddingLeft: '10px',
-        paddingRight: '10px'
+        height: '36px'
     });
 
     // Create buttons container with horizontal scroll
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
-        flexWrap: 'wrap',
-        gap: '8px',
-        maxHeight: '70px', 
+        flexWrap: 'column',
+        gap: '4px',
+        maxHeight: 'calc(100vh - 200px)', 
         overflowY: 'auto', 
         overflowX: 'hidden'
     });
@@ -4819,8 +4832,15 @@ function createButtonContainer() {
     // Update button styles to have minimum width
     const UPDATED_BUTTON_STYLES = {
         ...BUTTON_STYLES,
-        minWidth: '200px', // Add minimum width
-        flex: '0 0 auto' // Prevent shrinking
+        width: '100%',
+        flex: '0 0 auto',
+        height: '36px',
+        margin: '0px',
+        padding: '8px 12px',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        textAlign: 'left'
     };
 
     // Search functionality remains the same but uses updated button styles
