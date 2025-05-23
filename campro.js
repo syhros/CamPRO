@@ -4822,11 +4822,13 @@ function createButtonContainer() {
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
-        flexWrap: 'column',
+        flexDirection: 'column',
         gap: '4px',
-        maxHeight: 'calc(100vh - 200px)', 
-        overflowY: 'auto', 
-        overflowX: 'hidden'
+        maxHeight: '80px',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        paddingBottom: '56px',
+        alignItems: 'centre',
     });
 
     // Update button styles to have minimum width
@@ -4834,7 +4836,7 @@ function createButtonContainer() {
         ...BUTTON_STYLES,
         width: '100%',
         flex: '0 0 auto',
-        height: '36px',
+        height: '40px',
         margin: '0px',
         padding: '8px 12px',
         whiteSpace: 'nowrap',
