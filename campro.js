@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.10
+// @version      0.2.016.11
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -14,7 +14,7 @@
 // 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
-// 0.2.016.7- 0.2.016.10- UI & Search Improvements
+// 0.2.016.7- 0.2.016.11- UI & Search Improvements
 
 (function() {
     'use strict';
@@ -33,6 +33,7 @@
         zIndex: '9998',
         boxShadow: '0 -2px 10px rgba(0,0,0,0.3)',
         transition: 'transform 0.3s',
+        height: 'auto'
     };
 
     const BUTTON_STYLES = {
@@ -4806,29 +4807,33 @@ function createButtonContainer() {
     Object.assign(searchBox.style, {
         width: '25%',
         minWidth: '25%',
-        padding: '8px',
-        marginBottom: '10px',
+        padding: '8px 12px',
         border: '1px solid #444',
         borderRadius: '4px',
         background: '#333',
         color: '#fff',
         marginLeft: 'auto',
         marginRight: 'auto',
-        display: 'block',
-        height: '36px'
+        height: '36px',
+        position: 'relative' // Add relative positioning
     });
 
     // Create buttons container with horizontal scroll
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column-reverse', // Reverse the order so results appear above
         gap: '4px',
-        maxHeight: '80px',
+        width: '25%', // Match search box width
+        maxHeight: '160px',
         overflowY: 'auto',
         overflowX: 'hidden',
-        paddingBottom: '56px',
-        alignItems: 'centre',
+        marginTop: '-165px', // Move results above search box
+        position: 'absolute', // Position absolutely
+        bottom: '100%', // Position above the container
+        background: '#1f1f1f', // Match container background
+        borderRadius: '4px',
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
     });
 
     // Update button styles to have minimum width
