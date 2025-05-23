@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.25
+// @version      0.2.016.19
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -15,8 +15,6 @@
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
 // 0.2.016.7- 0.2.016.19 - UI & Search Improvements & Original button removal
-// 0.2.016.21 - Reverted 0.2.016.20
-// 0.2.016.20 - Toggle reverted
 
 (function() {
     'use strict';
@@ -4798,7 +4796,7 @@ function createButtonContainer() {
     // Hide/show toggle
     const toggleBtn = document.createElement('button');
     toggleBtn.textContent = '▲';
-    toggleBtn.style = 'position:absolute;right:8px;top:288px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
+    toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
     let hidden = false;
     toggleBtn.onclick = () => {
         hidden = !hidden;
