@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.21
+// @version      0.2.016.19
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -15,7 +15,7 @@
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
 // 0.2.016.7- 0.2.016.19 - UI & Search Improvements & Original button removal
-// 0.2.016.21 - Reverted 0.2.016.20
+// 0.2.016.22 - Revered 0.2.016.20
 
 (function() {
     'use strict';
@@ -4500,6 +4500,7 @@
     }
     function getFollowUpButton() {
         const addSubjectIframeDoc = getAddSubjectIframeDoc();
+
         return getElement(addSubjectIframeDoc, "//a[text()='Case Follow Up']");
     };
 
@@ -4650,10 +4651,6 @@ function searchActions(query) {
     
 function createButtonContainer() {
     // Create the main container
-    // Reply input element to position relative to
-    const replyInput = getReplyToCase();
-    if (!replyInput) return;
-    
     const container = document.createElement('div');
     applyStyles(container, CONTAINER_STYLES);
 
@@ -4662,10 +4659,8 @@ function createButtonContainer() {
     Object.assign(snoozeContainer.style, {
         display: 'flex',
         justifyContent: 'center',
-        gap: '6px',
-        marginBottom: '10px',
-        paddingLeft: '10px',
-        paddingTop: '10px'
+        gap: '4px',
+        marginBottom: '10px'
     });
 
     // Add snooze buttons
@@ -4725,7 +4720,7 @@ function createButtonContainer() {
     searchBox.type = 'text';
     searchBox.placeholder = 'Search categories, topics, blurbs...';
     Object.assign(searchBox.style, {
-        width: '40%',
+        width: '50%',
         minWidth: '25%',
         padding: '8px 12px',
         border: '1px solid #444',
@@ -4745,7 +4740,7 @@ function createButtonContainer() {
         display: 'flex',
         flexDirection: 'column-reverse', 
         gap: '4px',
-        width: '40%', 
+        width: '50%', 
         maxHeight: '160px',
         overflowY: 'auto',
         overflowX: 'hidden',
