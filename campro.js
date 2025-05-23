@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.17
+// @version      0.2.016.19
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -14,7 +14,7 @@
 // 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
-// 0.2.016.7- 0.2.016.17 - UI & Search Improvements & Original button removal
+// 0.2.016.7- 0.2.016.19 - UI & Search Improvements & Original button removal
 
 (function() {
     'use strict';
@@ -4524,94 +4524,7 @@
         selectElement.dispatchEvent(event);
     }
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-    // ========== POPUP UI ==========
-    function showSubcategoryPopup(actions, onSelect) {
-        // Remove any existing popup
-        const existing = document.querySelector('.wims-enhancer-popup');
-        if (existing) existing.remove();
-
-        // Create popup
-        const popup = document.createElement('div');
-        popup.classList.add('wims-enhancer-popup');
-        applyStyles(popup, POPUP_STYLES);
-
-        // Group by subcategory
-        const subcategories = [...new Set(actions.map(a => a.subcategory))];
-        subcategories.forEach(subcat => {
-            const btn = document.createElement('button');
-            btn.textContent = subcat;
-            btn.style = "margin-bottom:8px;padding:12px;background:#1976D2;color:#fff;border:none;border-radius:4px;cursor:pointer;";
-            btn.onclick = () => {
-                popup.remove();
-                // Show split popup for this subcategory
-                const subcatActions = actions.filter(a => a.subcategory === subcat);
-                showSplitPopup(subcatActions, onSelect);
-            };
-            popup.appendChild(btn);
-        });
-
-        document.body.appendChild(popup);
-    }
-
-    function showSplitPopup(actions, onSelect) {
-        // Remove any existing popup
-        const existing = document.querySelector('.wims-enhancer-popup');
-        if (existing) existing.remove();
-
-        // Create popup
-        const popup = document.createElement('div');
-        popup.classList.add('wims-enhancer-popup');
-        applyStyles(popup, POPUP_STYLES);
-
-        // Split actions by raisedBy
-        const carrierActions = actions.filter(a => a.raisedBy === "Carrier");
-        const siteActions = actions.filter(a => a.raisedBy === "Site");
-
-        // Create columns
-        const colStyle = "flex:1;display:flex;flex-direction:column;gap:12px;";
-        const dividerStyle = "width:2px;background:#444;margin:0 12px;";
-
-        const carrierCol = document.createElement('div');
-        carrierCol.style = colStyle;
-        carrierCol.innerHTML = `<div style="font-weight:bold;margin-bottom:8px;">Carrier Raised</div>`;
-        carrierActions.forEach(action => {
-            const btn = document.createElement('button');
-            btn.textContent = action.blurbName;
-            btn.style = "margin-bottom:8px;padding:12px;background:#1976D2;color:#fff;border:none;border-radius:4px;cursor:pointer;";
-            btn.onclick = () => {
-                popup.remove();
-                onSelect(action);
-            };
-            carrierCol.appendChild(btn);
-        });
-
-        const siteCol = document.createElement('div');
-        siteCol.style = colStyle;
-        siteCol.innerHTML = `<div style="font-weight:bold;margin-bottom:8px;">Site Raised</div>`;
-        siteActions.forEach(action => {
-            const btn = document.createElement('button');
-            btn.textContent = action.blurbName;
-            btn.style = "margin-bottom:8px;padding:12px;background:#2196F3;color:#fff;border:none;border-radius:4px;cursor:pointer;";
-            btn.onclick = () => {
-                popup.remove();
-                onSelect(action);
-            };
-            siteCol.appendChild(btn);
-        });
-
-        // Divider
-        const divider = document.createElement('div');
-        divider.style = dividerStyle;
-
-        // Assemble
-        popup.appendChild(carrierCol);
-        popup.appendChild(divider);
-        popup.appendChild(siteCol);
-
-        document.body.appendChild(popup);
-    }
-
+  
     // ========== MAIN BUTTON ACTION ==========
     async function handleButtonAction(action) {
         try {
@@ -4745,10 +4658,8 @@ function createButtonContainer() {
     Object.assign(snoozeContainer.style, {
         display: 'flex',
         justifyContent: 'center',
-        gap: '6px',
-        marginBottom: '10px',
-	paddingLeft: '8px',
-	paddingTop: '8px',
+        gap: '4px',
+        marginBottom: '10px'
     });
 
     // Add snooze buttons
@@ -4818,9 +4729,8 @@ function createButtonContainer() {
         marginLeft: 'auto',
         marginRight: 'auto',
         height: '36px',
-        position: 'relative',
-        float: 'right',
-        marginBottom: '10px' 
+        position: 'absolute',
+        right : '20px'
     });
 
     // Create buttons container with horizontal scroll
@@ -4856,7 +4766,7 @@ function createButtonContainer() {
         textAlign: 'left'
     };
 
-    // Search functionality remains the same but uses updated button styles
+    // Search functionality (keep existing search event listener)
     searchBox.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         
@@ -4865,19 +4775,7 @@ function createButtonContainer() {
         searchTimeout = setTimeout(() => {
             buttonsContainer.innerHTML = '';
             
-            if (!query) {
-                const categories = [...new Set(buttonActions.map(a => a.category))];
-                categories.forEach(category => {
-                    const button = document.createElement('button');
-                    button.textContent = category;
-                    applyStyles(button, UPDATED_BUTTON_STYLES);
-                    button.onclick = () => {
-                        const subcats = buttonActions.filter(a => a.category === category);
-                        showSubcategoryPopup(subcats, handleButtonAction);
-                    };
-                    buttonsContainer.appendChild(button);
-                });
-            } else {
+            if (query) {
                 const results = searchActions(query);
                 results.forEach(action => {
                     const button = document.createElement('button');
