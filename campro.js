@@ -11,7 +11,7 @@
 // @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
-// 0.20.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
+// 0.20.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases
 // 0.20.016 - Snooze button added
 
 (function() {
@@ -4619,25 +4619,25 @@
                 if (!site) return;
                 subject = buildSubject(site.toUpperCase(), action.topic);
             } else {
-                subject = `★ [${action.topic}] ★`;
+                subject = `★ ${action.topic} ★`;
             }
 
             // Assign to me if needed
             const assignButton = getAssignButton();
             if (assignButton && assignButton.textContent === "Assign to me") {
                 assignButton.click();
-                await delay(500);
+                await delay(30);
             }
             // Open reply
             const replyToCase = getReplyToCase();
             if (replyToCase) {
                 replyToCase.focus();
-                await delay(300);
+                await delay(30);
             }
             const replyButton = getReplyButton();
             if (replyButton) {
                 replyButton.click();
-                await delay(300);
+                await delay(30);
             }
             // Set fields
             const category = getCategory();
@@ -4750,6 +4750,7 @@ function createButtonContainer() {
     snoozeButtons.forEach(({ label, hours }) => {
     const button = document.createElement('button');
     button.textContent = label;
+    button.title = 'Set to Case follow up + adds ${label} Snooze time';
     Object.assign(button.style, {
         padding: '8px',
         width: '40px',
@@ -4762,18 +4763,18 @@ function createButtonContainer() {
         fontSize: '14px'
     });
     button.onclick = async () => {
-        // First click the reply box 
+        // First click the reply box
         const replyToCase = getReplyToCase();
         if (replyToCase) {
             replyToCase.focus();
-            await delay(300); // Wait for field to register click
+            await delay(30); // Wait for field to register click
         }
 
         // Then click the Follow Up button
         const followUpButton = getFollowUpButton();
         if (followUpButton) {
             followUpButton.click();
-            await delay(300); // Wait for follow up time field to appear
+            await delay(30); // Wait for follow up time field to appear
         }
 
         // Finally set the follow up datetime
@@ -4848,7 +4849,7 @@ function createButtonContainer() {
                 const results = searchActions(query);
                 results.forEach(action => {
                     const button = document.createElement('button');
-                    button.textContent = `${action.category} > ${action.subcategory} > ${action.blurbName}`;
+                    button.textContent = `${action.subcategory} > ${action.topic} > ${action.blurbName}`;
                     applyStyles(button, UPDATED_BUTTON_STYLES);
                     button.onclick = () => handleButtonAction(action);
                     buttonsContainer.appendChild(button);
