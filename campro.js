@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.24
+// @version      0.2.016.25
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -16,7 +16,7 @@
 // 0.2.016.5 - Minor snooze button update
 // 0.2.016.7- 0.2.016.19 - UI & Search Improvements & Original button removal
 // 0.2.016.21 - Reverted 0.2.016.20
-// 0.2.016.24 - Updated toggle button
+// 0.2.016.20 - Toggle reverted
 
 (function() {
     'use strict';
@@ -4651,19 +4651,14 @@ function searchActions(query) {
     
 function createButtonContainer() {
     // Create the main container
+    // Reply input element to position relative to
+    const replyInput = getReplyToCase();
+    if (!replyInput) return;
+    
     const container = document.createElement('div');
-    Object.assign(container.style, {
-        position: 'relative',
-        width: '100%',
-        background: '#1f1f1f',
-        padding: '10px',
-        zIndex: '9998',
-        boxShadow: '0 -2px 10px rgba(0,0,0,0.3)',
-        marginBottom: '10px',
-        transition: 'transform 0.3s'
-    });
+    applyStyles(container, CONTAINER_STYLES);
 
-    // Add snooze container
+    // Create snooze container
     const snoozeContainer = document.createElement('div');
     Object.assign(snoozeContainer.style, {
         display: 'flex',
@@ -4685,44 +4680,46 @@ function createButtonContainer() {
     ];
 
     snoozeButtons.forEach(({ label, hours }) => {
-        const button = document.createElement('button');
-        button.textContent = label;
-        button.title = `Add ${label} hours`;
-        Object.assign(button.style, {
-            padding: '4px',
-            width: '30px',
-            height: '30px',
-            background: '#444',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px'
-        });
-        
-        button.onclick = async () => {
-            const replyToCase = getReplyToCase();
-            if (replyToCase) {
-                replyToCase.focus();
-                await delay(300);
-            }
-
-            const followUpButton = getFollowUpButton();
-            if (followUpButton) {
-                followUpButton.click();
-                await delay(300);
-            }
-
-            const followUpDatetime = getFollowUpDatetime();
-            if (followUpDatetime) {
-                const date = new Date();
-                date.setTime(date.getTime() + hours * 60 * 60 * 1000);
-                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                setReactInputValue(followUpDatetime, formattedDate);
-            }
-        };
-        snoozeContainer.appendChild(button);
+    const button = document.createElement('button');
+    button.textContent = label;
+    button.title = `Add ${label} hours`;
+    Object.assign(button.style, {
+        padding: '4px',
+        width: '30px',
+        height: '30px',
+        background: '#444',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '14px'
     });
+    button.onclick = async () => {
+        // First click the reply box 
+        const replyToCase = getReplyToCase();
+        if (replyToCase) {
+            replyToCase.focus();
+            await delay(300); // Wait for field to register click
+        }
+
+        // Then click the Follow Up button
+        const followUpButton = getFollowUpButton();
+        if (followUpButton) {
+            followUpButton.click();
+            await delay(300); // Wait for follow up time field to appear
+        }
+
+        // Finally set the follow up datetime
+        const followUpDatetime = getFollowUpDatetime();
+        if (followUpDatetime) {
+            const date = new Date();
+            date.setTime(date.getTime() + hours * 60 * 60 * 1000);
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            setReactInputValue(followUpDatetime, formattedDate);
+        }
+    };
+    snoozeContainer.appendChild(button);
+});
 
     // Add search box
     const searchBox = document.createElement('input');
@@ -4740,29 +4737,29 @@ function createButtonContainer() {
         marginRight: 'auto',
         height: '36px',
         position: 'absolute',
-        right: '20px'
+        right : '20px'
     });
 
-    // Create buttons container
+    // Create buttons container with horizontal scroll
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
-        flexDirection: 'column-reverse',
+        flexDirection: 'column-reverse', 
         gap: '4px',
-        width: '40%',
+        width: '40%', 
         maxHeight: '160px',
         overflowY: 'auto',
         overflowX: 'hidden',
         marginTop: '-165px',
-        position: 'absolute',
+        position: 'absolute', 
         right: '20px',
-        bottom: '100%',
+        bottom: '100%', 
         background: '#1f1f1f',
         borderRadius: '4px',
         boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
     });
 
-    // Update button styles
+    // Update button styles to have minimum width
     const UPDATED_BUTTON_STYLES = {
         ...BUTTON_STYLES,
         width: '100%',
@@ -4776,7 +4773,7 @@ function createButtonContainer() {
         textAlign: 'left'
     };
 
-    // Search functionality
+    // Search functionality (keep existing search event listener)
     searchBox.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         
@@ -4801,19 +4798,7 @@ function createButtonContainer() {
     // Hide/show toggle
     const toggleBtn = document.createElement('button');
     toggleBtn.textContent = '▲';
-    Object.assign(toggleBtn.style, {
-        position: 'absolute',
-        right: '8px',
-        top: '-28px',
-        background: '#444',
-        color: '#fff', 
-        border: 'none',
-        borderRadius: '0 0 6px 6px',
-        padding: '4px 12px',
-        cursor: 'pointer',
-        zIndex: '10001'
-    });
-
+    toggleBtn.style = 'position:absolute;right:8px;top:288px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
     let hidden = false;
     toggleBtn.onclick = () => {
         hidden = !hidden;
@@ -4821,30 +4806,32 @@ function createButtonContainer() {
         toggleBtn.textContent = hidden ? '▼' : '▲';
     };
 
-    // Add components to container
     container.appendChild(snoozeContainer);
+    container.appendChild(toggleBtn);
     container.appendChild(searchBox);
     container.appendChild(buttonsContainer);
+    document.body.appendChild(container);
 
-    // Event listener for input focus
-    const replyInput = getReplyToCase();
-    if (replyInput) {
-        replyInput.addEventListener('focus', async () => {
-            await delay(300);
-            const replyTextBox = getReplyTextbox();
-            if (replyTextBox) {
-                replyTextBox.parentElement.insertBefore(container, replyTextBox);
-            }
-        });
+    // Initialize with category buttons
+    const categories = [...new Set(buttonActions.map(a => a.category))];
+    categories.forEach(category => {
+        const button = document.createElement('button');
+        button.textContent = category;
+        applyStyles(button, BUTTON_STYLES);
+        button.onclick = () => {
+            const subcats = buttonActions.filter(a => a.category === category);
+            showSubcategoryPopup(subcats, handleButtonAction);
+        };
+        buttonsContainer.appendChild(button);
+    });
 
-        // Insert container before the reply input
-        replyInput.parentElement.insertBefore(container, replyInput);
-    }
+    document.body.appendChild(container);
 }
 
 // ========== INIT ==========
 function init() {
     createButtonContainer();
+    console.log('Enhanced WIMS Interface: Initialized');
 }
 
 if (document.readyState === 'loading') {
