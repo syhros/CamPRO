@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.31
+// @version      0.2.016.32
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -4552,457 +4552,294 @@
     }
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   
-    // ========== MAIN BUTTON ACTION ==========
-async function handleButtonAction(action) {
-    // Handle custom button actions
-    if (action.customButton) {
-        if (action.action.blurb) {
-            const replyTextBox = getReplyTextbox();
-            if (replyTextBox) setReactInputValue(replyTextBox, action.action.blurb);
-        }
-        if (action.action.status) {
-            const statusDropdown = getStatusDropdown();
-            if (statusDropdown) setReactSelectValue(statusDropdown, action.action.status);
-        }
-        return;
-    }
+     // ========== MAIN BUTTON ACTION ==========
+    async function handleButtonAction(action) {
+        // ... (Your existing handleButtonAction function code remains unchanged)
+    if (action.customButton) {
+        if (action.action.blurb) {
+            const replyTextBox = getReplyTextbox();
+            if (replyTextBox) setReactInputValue(replyTextBox, action.action.blurb);
+        }
+        if (action.action.status) {
+            const statusDropdown = getStatusDropdown();
+            if (statusDropdown) setReactSelectValue(statusDropdown, action.action.status);
+        }
+        return;
+    }
 
-    try {
-        let subject = action.topic;
-        if (action.siteInput) {
-            // Prompt for site code
-            const site = prompt("Enter site code (e.g. BHX1):");
-            if (!site) return;
-            subject = buildSubject(site.toUpperCase(), action.topic);
-        } else {
-            subject = `★ ${action.topic} ★`;
-        }
+    try {
+        let subject = action.topic;
+        if (action.siteInput) {
+            const site = prompt("Enter site code (e.g. BHX1):");
+            if (!site) return;
+            subject = buildSubject(site.toUpperCase(), action.topic);
+        } else {
+            subject = `★ ${action.topic} ★`;
+        }
 
-        // Open reply
-        const replyToCase = getReplyToCase();
-        if (replyToCase) {
-            replyToCase.focus();
-            await delay(300);
-        }
-        const replyButton = getReplyButton();
-        if (replyButton) {
-            replyButton.click();
-                await delay(300);
-            }
-            // Set fields
-            const category = getCategory();
-            if (category) setReactSelectValue(category, action.category);
-            const subjectInput = getAddSubject();
-            if (subjectInput) setReactInputValue(subjectInput, subject);
-            const replyTextBox = getReplyTextbox();
-            if (replyTextBox) setReactInputValue(replyTextBox, action.blurb);
-            const statusDropdown = getStatusDropdown();
-            if (statusDropdown) setReactSelectValue(statusDropdown, action.status);
+        const replyToCase = getReplyToCase();
+        if (replyToCase) {
+            replyToCase.focus();
+            await delay(300);
+        }
+        const replyButton = getReplyButton();
+        if (replyButton) {
+            replyButton.click();
+            await delay(300);
+        }
+        const category = getCategory();
+        if (category) setReactSelectValue(category, action.category);
+        const subjectInput = getAddSubject();
+        if (subjectInput) setReactInputValue(subjectInput, subject);
+        const replyTextBox = getReplyTextbox();
+        if (replyTextBox) setReactInputValue(replyTextBox, action.blurb);
+        const statusDropdown = getStatusDropdown();
+        if (statusDropdown) setReactSelectValue(statusDropdown, action.status);
 
-            // Set snooze if needed
-            if (action.snooze) {
-                const followUpDatetime = getFollowUpDatetime();
-                if (followUpDatetime) {
-                    function pad(number) { return (number < 10) ? '0' + number : number; }
-                    let date = new Date();
-                    date.setTime(date.getTime() + action.snooze * 60 * 60 * 1000);
-                    const formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-                    setReactInputValue(followUpDatetime, formattedDate);
-                }
-            }
-            // Show confirmation
-            showPopup(`Applied: ${subject}`);
-        } catch (error) {
-            console.error('Error applying action:', error);
-            showPopup('Error applying action. Please try again.', true);
-        }
+        if (action.snooze) {
+            const followUpDatetime = getFollowUpDatetime();
+            if (followUpDatetime) {
+                function pad(number) { return (number < 10) ? '0' + number : number; }
+                let date = new Date();
+                date.setTime(date.getTime() + action.snooze * 60 * 60 * 1000);
+                const formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                setReactInputValue(followUpDatetime, formattedDate);
+            }
+        }
+        showPopup(`Applied: ${subject}`);
+    } catch (error) {
+        console.error('Error applying action:', error);
+        showPopup('Error applying action. Please try again.', true);
+    }
     }
 
     // ========== SIMPLE POPUP ==========
     function showPopup(message, isError = false) {
-        // Remove any existing popup
-        const existingPopup = document.querySelector('.wims-enhancer-popup');
-        if (existingPopup) existingPopup.remove();
+        // ... (Your existing showPopup function code remains unchanged)
+    const existingPopup = document.querySelector('.wims-enhancer-popup');
+    if (existingPopup) existingPopup.remove();
 
-        // Create popup
-        const popup = document.createElement('div');
-        popup.classList.add('wims-enhancer-popup');
-        Object.assign(popup.style, {
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            padding: '35px',
-            background: '#000000',
-            color: '#ffffff',
-            borderLeft: isError ? '4px solid #F44336' : '4px solid #2196F3',
-            borderRadius: '4px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-            zIndex: '9999',
-            fontFamily: 'Arial, sans-serif',
-            minWidth: '400px',
-            maxWidth: '800px',
-            fontSize: '16px',
-        });
-        popup.textContent = message;
-        document.body.appendChild(popup);
+    const popup = document.createElement('div');
+    popup.classList.add('wims-enhancer-popup');
+    Object.assign(popup.style, {
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        padding: '35px', background: '#000000', color: '#ffffff',
+        borderLeft: isError ? '4px solid #F44336' : '4px solid #2196F3',
+        borderRadius: '4px', boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+        zIndex: '9999', fontFamily: 'Arial, sans-serif', minWidth: '400px',
+        maxWidth: '800px', fontSize: '16px',
+    });
+    popup.textContent = message;
+    document.body.appendChild(popup);
 
-        setTimeout(() => {
-            popup.style.opacity = '0';
-            popup.style.transition = 'opacity 0.5s';
-            setTimeout(() => popup.remove(), 500);
-        }, 2000);
+    setTimeout(() => {
+        popup.style.opacity = '0';
+        popup.style.transition = 'opacity 0.5s';
+        setTimeout(() => popup.remove(), 500);
+    }, 2000);
     }
 
-// ========== UI CREATION ==========
-function searchActions(query) {
-    if (!query) return [];
+    // ========== UI CREATION ==========
+    function searchActions(query) {
+        // ... (Your existing searchActions function code remains unchanged)
+    if (!query) return [];
+    const searchTerms = query.toLowerCase().trim().split(/\s+/);
+    return buttonActions.filter(action => {
+        const searchableText = [
+            action.category, action.subcategory, action.topic, 
+            action.blurbName, action.sop, action.blurb
+        ].map(text => (text || '').toLowerCase()).join(' ');
+        return searchTerms.every(term => searchableText.includes(term));
+    }).sort((a, b) => {
+        const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
+        const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
+        let aScore = 0;
+        let bScore = 0;
+        searchTerms.forEach(term => {
+            if (aText.startsWith(term)) aScore++;
+            if (bText.startsWith(term)) bScore++;
+        });
+        return bScore - aScore;
+    });
+    }
     
-    const searchTerms = query.toLowerCase().trim().split(/\s+/);
-    
-    return buttonActions.filter(action => {
-        const searchableText = [
-            action.category,
-            action.subcategory,
-            action.topic, 
-            action.blurbName,
-            action.sop,
-            action.blurb
-        ].map(text => (text || '').toLowerCase()).join(' ');
+    // ... (createCustomButtonsContainer and createNestedButtonGroup functions remain unchanged) ...
+    function createCustomButtonsContainer() { /* ... unchanged ... */ }
+    function createNestedButtonGroup(groupName, config) { /* ... unchanged ... */ }
 
-        return searchTerms.every(term => searchableText.includes(term));
-    }).sort((a, b) => {
-        // Sort by how many search terms match at the start of the text
-        const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
-        const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
+
+    // RESTRUCTURED a lot of this function for clarity and correctness
+    function createButtonContainer() {
+        const container = document.createElement('div');
+        applyStyles(container, CONTAINER_STYLES); // Assuming CONTAINER_STYLES is defined
+
+        // --- 1. Create all UI elements first ---
+
+        const customButtonsContainer = createCustomButtonsContainer();
         
-        let aScore = 0;
-        let bScore = 0;
-        
-        searchTerms.forEach(term => {
-            if (aText.startsWith(term)) aScore++;
-            if (bText.startsWith(term)) bScore++;
-        });
-        
-        return bScore - aScore;
-    });
-}
-    
-function createButtonContainer() {
-    // Create the main container
-
-    // Reply input element to position relative to
-    const replyInput = getReplyToCase();
-    if (!replyInput) return;
-    
-    const container = document.createElement('div');
-    applyStyles(container, CONTAINER_STYLES);
-
-    // Add custom buttons container
-    const customButtonsContainer = createCustomButtonsContainer();
-    container.insertBefore(customButtonsContainer, searchBox);
-
-    return container;
-}
-function createCustomButtonsContainer() {
-    const container = document.createElement('div');
-    Object.assign(container.style, {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        marginLeft: '10px'
-    });
-
-    // Add standard custom buttons
-    CUSTOM_BUTTONS.standardButtons.forEach(btn => {
-        const button = document.createElement('button');
-        button.textContent = btn.name;
-        button.title = btn.label;
-        Object.assign(button.style, {
-            padding: '4px',
-            minWidth: '40px',
-            height: '30px',
-            background: '#444',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px'
-        });
-        
-        button.onclick = () => handleButtonAction({
-            customButton: true,
-            action: btn.action
-        });
-        
-        container.appendChild(button);
-    });
-
-    // Add nested button groups
-    Object.entries(CUSTOM_BUTTONS.nestedButtons).forEach(([groupName, config]) => {
-        const group = createNestedButtonGroup(groupName, config);
-        container.appendChild(group);
-    });
-
-    return container;
-}
-
-function createNestedButtonGroup(groupName, config) {
-    const group = document.createElement('div');
-    group.style.position = 'relative';
-    
-    // Parent button
-    const parentBtn = document.createElement('button');
-    parentBtn.textContent = groupName;
-    parentBtn.title = config.label;
-    Object.assign(parentBtn.style, {
-        padding: '4px',
-        minWidth: '40px',
-        height: '30px',
-        background: '#444',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '14px'
-    });
-
-    // Children container 
-    const childrenContainer = document.createElement('div');
-    Object.assign(childrenContainer.style, {
-        position: 'absolute',
-        top: '100%',
-        left: '0',
-        background: '#333',
-        border: '1px solid #444',
-        borderRadius: '4px',
-        display: 'none',
-        zIndex: 9999
-    });
-
-    // Add child buttons
-    config.children.forEach(child => {
-        const childBtn = document.createElement('button');
-        childBtn.textContent = child.name;
-        childBtn.title = child.label;
-        Object.assign(childBtn.style, {
-            width: '100%',
-            padding: '8px',
-            background: 'none',
-            border: 'none',
-            color: '#fff',
-            cursor: 'pointer',
-            textAlign: 'left'
+        const snoozeContainer = document.createElement('div');
+        Object.assign(snoozeContainer.style, {
+            display: 'flex', justifyContent: 'center', gap: '6px',
+            marginBottom: '10px', paddingLeft: '10px', paddingTop: '10px'
         });
 
-        childBtn.onclick = () => handleButtonAction({
-            customButton: true,
-            action: child.action
+        const snoozeButtons = [
+            { label: '15', hours: 0.25 }, { label: '30', hours: 0.5 },
+            { label: '1h', hours: 1 }, { label: '2h', hours: 2 },
+            { label: '4h', hours: 4 }, { label: '8h', hours: 8 }
+        ];
+
+        snoozeButtons.forEach(({ label, hours }) => {
+            const button = document.createElement('button');
+            button.textContent = label;
+            button.title = `Add ${label} to follow up`;
+            Object.assign(button.style, {
+                padding: '4px', width: '30px', height: '30px', background: '#444',
+                color: '#fff', border: 'none', borderRadius: '4px',
+                cursor: 'pointer', fontSize: '14px'
+            });
+            button.onclick = async () => {
+                try {
+                    const replyToCase = getReplyToCase();
+                    if (replyToCase) {
+                        replyToCase.focus();
+                        await delay(300);
+                    }
+                    const followUpButton = getFollowUpButton();
+                    if (followUpButton) {
+                        followUpButton.click();
+                        await delay(300);
+                    }
+                    const followUpDatetime = getFollowUpDatetime();
+                    if (followUpDatetime) {
+                        const date = new Date();
+                        date.setTime(date.getTime() + hours * 60 * 60 * 1000);
+                        const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                        setReactInputValue(followUpDatetime, formattedDate);
+                    }
+                } catch (error) {
+                    console.error('Snooze error:', error);
+                    showPopup('Error setting snooze time.', true);
+                }
+            };
+            snoozeContainer.appendChild(button);
         });
 
-        childrenContainer.appendChild(childBtn);
-    });
+        const searchBox = document.createElement('input');
+        searchBox.type = 'text';
+        searchBox.placeholder = 'Search categories, topics, blurbs...';
+        Object.assign(searchBox.style, {
+            width: '40%', minWidth: '25%', padding: '8px 12px', border: '1px solid #444',
+            borderRadius: '4px', background: '#333', color: '#fff', marginLeft: 'auto',
+            marginRight: 'auto', height: '36px', position: 'absolute', right: '20px'
+        });
 
-    // Toggle children visibility
-    parentBtn.onclick = () => {
-        childrenContainer.style.display = 
-            childrenContainer.style.display === 'none' ? 'block' : 'none';
-    };
+        const buttonsContainer = document.createElement('div');
+        Object.assign(buttonsContainer.style, {
+            display: 'flex', flexDirection: 'column-reverse', gap: '4px', width: '40%',
+            maxHeight: '160px', overflowY: 'auto', overflowX: 'hidden', marginTop: '-165px',
+            position: 'absolute', right: '20px', bottom: '100%', background: '#1f1f1f',
+            borderRadius: '4px', boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
+        });
 
-    group.appendChild(parentBtn);
-    group.appendChild(childrenContainer);
-    return group;
-}
+        const UPDATED_BUTTON_STYLES = {
+            ...BUTTON_STYLES, // Assuming BUTTON_STYLES is defined
+            width: '100%', flex: '0 0 auto', height: '40px', margin: '0px',
+            padding: '8px 12px', whiteSpace: 'nowrap', overflow: 'hidden',
+            textOverflow: 'ellipsis', textAlign: 'left'
+        };
 
-    // Create snooze container
-    const snoozeContainer = document.createElement('div');
-    Object.assign(snoozeContainer.style, {
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '6px',
-        marginBottom: '10px',
-        paddingLeft: '10px',
-        paddingTop: '10px'
-    });
-
-    // Add snooze buttons
-    const snoozeButtons = [
-        { label: '15', hours: 0.25 },
-        { label: '30', hours: 0.5 },
-        { label: '1h', hours: 1 },
-        { label: '2h', hours: 2 },
-        { label: '4h', hours: 4 },
-        { label: '8h', hours: 8 }
-    ];
-
-    snoozeButtons.forEach(({ label, hours }) => {
-    const button = document.createElement('button');
-    button.textContent = label;
-    button.title = `Add ${label} hours`;
-    Object.assign(button.style, {
-        padding: '4px',
-        width: '30px',
-        height: '30px',
-        background: '#444',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '14px'
-    });
-    button.onclick = async () => {
-        // First click the reply box 
-        const replyToCase = getReplyToCase();
-        if (replyToCase) {
-            replyToCase.focus();
-            await delay(300); // Wait for field to register click
-        }
-
-        // Then click the Follow Up button
-        const followUpButton = getFollowUpButton();
-        if (followUpButton) {
-            followUpButton.click();
-            await delay(300); // Wait for follow up time field to appear
-        }
-
-        // Finally set the follow up datetime
-        const followUpDatetime = getFollowUpDatetime();
-        if (followUpDatetime) {
-            const date = new Date();
-            date.setTime(date.getTime() + hours * 60 * 60 * 1000);
-            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-            setReactInputValue(followUpDatetime, formattedDate);
-        }
-    };
-    snoozeContainer.appendChild(button);
-});
-    
-    container.insertBefore(customButtonsContainer, searchBox);
-
-    // Add search box
-    const searchBox = document.createElement('input');
-    searchBox.type = 'text';
-    searchBox.placeholder = 'Search categories, topics, blurbs...';
-    Object.assign(searchBox.style, {
-        width: '40%',
-        minWidth: '25%',
-        padding: '8px 12px',
-        border: '1px solid #444',
-        borderRadius: '4px',
-        background: '#333',
-        color: '#fff',
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        height: '36px',
-        position: 'absolute',
-        right : '20px'
-    });
-
-    // Create buttons container with horizontal scroll
-    const buttonsContainer = document.createElement('div');
-    Object.assign(buttonsContainer.style, {
-        display: 'flex',
-        flexDirection: 'column-reverse', 
-        gap: '4px',
-        width: '40%', 
-        maxHeight: '160px',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        marginTop: '-165px',
-        position: 'absolute', 
-        right: '20px',
-        bottom: '100%', 
-        background: '#1f1f1f',
-        borderRadius: '4px',
-        boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
-    });
-
-    // Update button styles to have minimum width
-    const UPDATED_BUTTON_STYLES = {
-        ...BUTTON_STYLES,
-        width: '100%',
-        flex: '0 0 auto',
-        height: '40px',
-        margin: '0px',
-        padding: '8px 12px',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        textAlign: 'left'
-    };
-
-    // Search functionality (keep existing search event listener)
-    searchBox.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-        
         let searchTimeout;
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            buttonsContainer.innerHTML = '';
-            
-            if (query) {
-                const results = searchActions(query);
-                results.forEach(action => {
-                    const button = document.createElement('button');
-                    button.textContent = `${action.subcategory} > ${action.topic} > ${action.blurbName}`;
-                    applyStyles(button, UPDATED_BUTTON_STYLES);
-                    button.onclick = () => handleButtonAction(action);
-                    buttonsContainer.appendChild(button);
-                });
-            }
-        }, 300);
-    });
+        searchBox.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                buttonsContainer.innerHTML = '';
+                if (query) {
+                    const results = searchActions(query);
+                    results.forEach(action => {
+                        const button = document.createElement('button');
+                        button.textContent = `${action.subcategory} > ${action.topic} > ${action.blurbName}`;
+                        applyStyles(button, UPDATED_BUTTON_STYLES);
+                        button.onclick = () => handleButtonAction(action);
+                        buttonsContainer.appendChild(button);
+                    });
+                }
+            }, 300);
+        });
+        
+        const toggleBtn = document.createElement('button');
+        toggleBtn.textContent = '▲';
+        toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
+        let hidden = false;
+        toggleBtn.onclick = () => {
+            hidden = !hidden;
+            container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
+            toggleBtn.textContent = hidden ? '▼' : '▲';
+        };
 
-    // Hide/show toggle
-const toggleBtn = document.createElement('button');
-toggleBtn.textContent = '▲';
-toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
-let hidden = false;
-toggleBtn.onclick = () => {
-    hidden = !hidden;
-    container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
-    toggleBtn.textContent = hidden ? '▼' : '▲';
-};
+        // --- 2. Append all created elements to the main container in order ---
+        container.appendChild(customButtonsContainer);
+        container.appendChild(snoozeContainer);
+        container.appendChild(toggleBtn);
+        container.appendChild(searchBox);
+        container.appendChild(buttonsContainer);
+        
+        document.body.appendChild(container);
 
-container.appendChild(snoozeContainer);
-container.appendChild(toggleBtn);
-container.appendChild(searchBox);
-container.appendChild(buttonsContainer);
-document.body.appendChild(container);
-
-// Initialize with category buttons
-const categories = [...new Set(buttonActions.map(a => a.category))];
-categories.forEach(category => {
-    const button = document.createElement('button');
-    button.textContent = category;
-    applyStyles(button, BUTTON_STYLES);
-    button.onclick = () => {
-        const subcats = buttonActions.filter(a => a.category === category);
-        showSubcategoryPopup(subcats, handleButtonAction);
-    };
-    buttonsContainer.appendChild(button);
-});
-
-
-// ========== INIT ==========
-function init() {
-    createButtonContainer();
-    console.log('Enhanced WIMS Interface: Initialized');
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
-
-// ========== SUBJECT BUILDER ==========
-function buildSubject(site, topic) {
-    const attr = siteAttributes[site] || {};
-    if (attr.region === 'UK') {
-        return `★ [${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+        // --- 3. Initialize default buttons ---
+        const categories = [...new Set(buttonActions.map(a => a.category))];
+        categories.forEach(category => {
+            const button = document.createElement('button');
+            button.textContent = category;
+            applyStyles(button, BUTTON_STYLES);
+            button.onclick = () => {
+                const subcats = buttonActions.filter(a => a.category === category);
+                showSubcategoryPopup(subcats, handleButtonAction);
+            };
+            buttonsContainer.appendChild(button);
+        });
     }
-    return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
-}
+
+    // ========== ROBUST INITIALIZATION ==========
+    function init() {
+        // Check if the UI has already been injected
+        if (document.querySelector('.wims-enhancer-popup')) {
+             return;
+        }
+
+        // Use an interval to wait for the target app's UI to be ready
+        const maxAttempts = 20;
+        let attempt = 0;
+        const interval = setInterval(() => {
+            // The element that your script depends on to anchor its UI
+            const anchorElement = getReplyToCase();
+            
+            if (anchorElement) {
+                clearInterval(interval);
+                createButtonContainer();
+                console.log('Enhanced WIMS Interface: Initialized');
+            } else {
+                attempt++;
+                if (attempt > maxAttempts) {
+                    clearInterval(interval);
+                    console.error('Enhanced WIMS Interface: Could not find anchor element to render UI.');
+                }
+            }
+        }, 500); // Check every 500ms
+    }
+
+    // Start the script
+    init();
+
+    // ========== SUBJECT BUILDER ==========
+    function buildSubject(site, topic) {
+        // ... (Your existing buildSubject function code remains unchanged)
+        const attr = siteAttributes[site] || {};
+        if (attr.region === 'UK') {
+            return `★ [${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+        }
+        return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+    }
 
 })();
