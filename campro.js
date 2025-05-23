@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.30
+// @version      0.2.016.31
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -11,11 +11,10 @@
 // @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
-// 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases
+// 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
 // 0.2.016.7- 0.2.016.19 - UI & Search Improvements & Original button removal
-// 0.2.016.22 - Revered 0.2.016.20
 
 (function() {
     'use strict';
@@ -4408,8 +4407,36 @@
             }
         },
     };
-
-
+    
+    // Custom quick action buttons
+    const CUSTOM_BUTTONS = {
+        standardButtons: [
+            {
+                name: 'FCSB',
+                label: 'FC See below',
+                action: {
+                    blurb: "Hello All - @FC, Please be advised on below.\nClosing case.",
+                    status: "Resolved"
+                }
+            },
+            // ... other buttons ...
+        ],
+        nestedButtons: {
+        'TS': {
+            label: 'Timestamps',
+            children: [
+                {
+                    name: 'TSU',
+                    label: 'Timestamps Updated',
+                    action: {
+                        blurb: "Hello All,\nTimestamps have been updated.\nClosing case.",
+                        status: "Resolved"
+                    }
+                }
+            ]
+        }
+    }
+};
 
     // Each button can have multiple actions (for popup), each with raisedBy, blurb, snooze, etc.
     const buttonActions = generateButtonActions(categoriesDictionary);
@@ -4430,7 +4457,7 @@
                    for (const [blurbName, blurbData] of Object.entries(blurbs)) {
                         // Check if blurbData contains settings object as third element
                         const settings = blurbData[2] || {};
-
+                    
                         actions.push({
                             category,
                             subcategory,
@@ -4500,7 +4527,6 @@
     }
     function getFollowUpButton() {
         const addSubjectIframeDoc = getAddSubjectIframeDoc();
-
         return getElement(addSubjectIframeDoc, "//a[text()='Case Follow Up']");
     };
 
@@ -4525,29 +4551,42 @@
         selectElement.dispatchEvent(event);
     }
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
+  
     // ========== MAIN BUTTON ACTION ==========
-    async function handleButtonAction(action) {
-        try {
-            let subject = action.topic;
-            if (action.siteInput) {
-                // Prompt for site code
-                const site = prompt("Enter site code (e.g. BHX1):");
-                if (!site) return;
-                subject = buildSubject(site.toUpperCase(), action.topic);
-            } else {
-                subject = `★ ${action.topic} ★`;
-            }
+async function handleButtonAction(action) {
+    // Handle custom button actions
+    if (action.customButton) {
+        if (action.action.blurb) {
+            const replyTextBox = getReplyTextbox();
+            if (replyTextBox) setReactInputValue(replyTextBox, action.action.blurb);
+        }
+        if (action.action.status) {
+            const statusDropdown = getStatusDropdown();
+            if (statusDropdown) setReactSelectValue(statusDropdown, action.action.status);
+        }
+        return;
+    }
 
-            // Open reply
-            const replyToCase = getReplyToCase();
-            if (replyToCase) {
-                replyToCase.focus();
-                await delay(300);
-            }
-            const replyButton = getReplyButton();
-            if (replyButton) {
-                replyButton.click();
+    try {
+        let subject = action.topic;
+        if (action.siteInput) {
+            // Prompt for site code
+            const site = prompt("Enter site code (e.g. BHX1):");
+            if (!site) return;
+            subject = buildSubject(site.toUpperCase(), action.topic);
+        } else {
+            subject = `★ ${action.topic} ★`;
+        }
+
+        // Open reply
+        const replyToCase = getReplyToCase();
+        if (replyToCase) {
+            replyToCase.focus();
+            await delay(300);
+        }
+        const replyButton = getReplyButton();
+        if (replyButton) {
+            replyButton.click();
                 await delay(300);
             }
             // Set fields
@@ -4618,14 +4657,14 @@
 // ========== UI CREATION ==========
 function searchActions(query) {
     if (!query) return [];
-
+    
     const searchTerms = query.toLowerCase().trim().split(/\s+/);
-
+    
     return buttonActions.filter(action => {
         const searchableText = [
             action.category,
             action.subcategory,
-            action.topic,
+            action.topic, 
             action.blurbName,
             action.sop,
             action.blurb
@@ -4636,23 +4675,144 @@ function searchActions(query) {
         // Sort by how many search terms match at the start of the text
         const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
         const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
-
+        
         let aScore = 0;
         let bScore = 0;
-
+        
         searchTerms.forEach(term => {
             if (aText.startsWith(term)) aScore++;
             if (bText.startsWith(term)) bScore++;
         });
-
+        
         return bScore - aScore;
     });
 }
-
+    
 function createButtonContainer() {
     // Create the main container
+
+    // Reply input element to position relative to
+    const replyInput = getReplyToCase();
+    if (!replyInput) return;
+    
     const container = document.createElement('div');
     applyStyles(container, CONTAINER_STYLES);
+
+    // Add custom buttons container
+    const customButtonsContainer = createCustomButtonsContainer();
+    container.insertBefore(customButtonsContainer, searchBox);
+
+    return container;
+}
+function createCustomButtonsContainer() {
+    const container = document.createElement('div');
+    Object.assign(container.style, {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        marginLeft: '10px'
+    });
+
+    // Add standard custom buttons
+    CUSTOM_BUTTONS.standardButtons.forEach(btn => {
+        const button = document.createElement('button');
+        button.textContent = btn.name;
+        button.title = btn.label;
+        Object.assign(button.style, {
+            padding: '4px',
+            minWidth: '40px',
+            height: '30px',
+            background: '#444',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+        });
+        
+        button.onclick = () => handleButtonAction({
+            customButton: true,
+            action: btn.action
+        });
+        
+        container.appendChild(button);
+    });
+
+    // Add nested button groups
+    Object.entries(CUSTOM_BUTTONS.nestedButtons).forEach(([groupName, config]) => {
+        const group = createNestedButtonGroup(groupName, config);
+        container.appendChild(group);
+    });
+
+    return container;
+}
+
+function createNestedButtonGroup(groupName, config) {
+    const group = document.createElement('div');
+    group.style.position = 'relative';
+    
+    // Parent button
+    const parentBtn = document.createElement('button');
+    parentBtn.textContent = groupName;
+    parentBtn.title = config.label;
+    Object.assign(parentBtn.style, {
+        padding: '4px',
+        minWidth: '40px',
+        height: '30px',
+        background: '#444',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '14px'
+    });
+
+    // Children container 
+    const childrenContainer = document.createElement('div');
+    Object.assign(childrenContainer.style, {
+        position: 'absolute',
+        top: '100%',
+        left: '0',
+        background: '#333',
+        border: '1px solid #444',
+        borderRadius: '4px',
+        display: 'none',
+        zIndex: 9999
+    });
+
+    // Add child buttons
+    config.children.forEach(child => {
+        const childBtn = document.createElement('button');
+        childBtn.textContent = child.name;
+        childBtn.title = child.label;
+        Object.assign(childBtn.style, {
+            width: '100%',
+            padding: '8px',
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            textAlign: 'left'
+        });
+
+        childBtn.onclick = () => handleButtonAction({
+            customButton: true,
+            action: child.action
+        });
+
+        childrenContainer.appendChild(childBtn);
+    });
+
+    // Toggle children visibility
+    parentBtn.onclick = () => {
+        childrenContainer.style.display = 
+            childrenContainer.style.display === 'none' ? 'block' : 'none';
+    };
+
+    group.appendChild(parentBtn);
+    group.appendChild(childrenContainer);
+    return group;
+}
 
     // Create snooze container
     const snoozeContainer = document.createElement('div');
@@ -4661,8 +4821,8 @@ function createButtonContainer() {
         justifyContent: 'center',
         gap: '6px',
         marginBottom: '10px',
-        paddingTop: '10px',
-        paddingLeft: '10px'
+        paddingLeft: '10px',
+        paddingTop: '10px'
     });
 
     // Add snooze buttons
@@ -4691,7 +4851,7 @@ function createButtonContainer() {
         fontSize: '14px'
     });
     button.onclick = async () => {
-        // First click the reply box
+        // First click the reply box 
         const replyToCase = getReplyToCase();
         if (replyToCase) {
             replyToCase.focus();
@@ -4716,6 +4876,8 @@ function createButtonContainer() {
     };
     snoozeContainer.appendChild(button);
 });
+    
+    container.insertBefore(customButtonsContainer, searchBox);
 
     // Add search box
     const searchBox = document.createElement('input');
@@ -4740,16 +4902,16 @@ function createButtonContainer() {
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
-        flexDirection: 'column-reverse',
+        flexDirection: 'column-reverse', 
         gap: '4px',
-        width: '40%',
+        width: '40%', 
         maxHeight: '160px',
         overflowY: 'auto',
         overflowX: 'hidden',
         marginTop: '-165px',
-        position: 'absolute',
+        position: 'absolute', 
         right: '20px',
-        bottom: '100%',
+        bottom: '100%', 
         background: '#1f1f1f',
         borderRadius: '4px',
         boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
@@ -4772,12 +4934,12 @@ function createButtonContainer() {
     // Search functionality (keep existing search event listener)
     searchBox.addEventListener('input', (e) => {
         const query = e.target.value.trim();
-
+        
         let searchTimeout;
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             buttonsContainer.innerHTML = '';
-
+            
             if (query) {
                 const results = searchActions(query);
                 results.forEach(action => {
@@ -4792,22 +4954,35 @@ function createButtonContainer() {
     });
 
     // Hide/show toggle
-    const toggleBtn = document.createElement('button');
-    toggleBtn.textContent = '▲';
-    toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
-    let hidden = false;
-    toggleBtn.onclick = () => {
-        hidden = !hidden;
-        container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
-        toggleBtn.textContent = hidden ? '▼' : '▲';
-    };
+const toggleBtn = document.createElement('button');
+toggleBtn.textContent = '▲';
+toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
+let hidden = false;
+toggleBtn.onclick = () => {
+    hidden = !hidden;
+    container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
+    toggleBtn.textContent = hidden ? '▼' : '▲';
+};
 
-    container.appendChild(snoozeContainer);
-    container.appendChild(toggleBtn);
-    container.appendChild(searchBox);
-    container.appendChild(buttonsContainer);
-    document.body.appendChild(container);
-}
+container.appendChild(snoozeContainer);
+container.appendChild(toggleBtn);
+container.appendChild(searchBox);
+container.appendChild(buttonsContainer);
+document.body.appendChild(container);
+
+// Initialize with category buttons
+const categories = [...new Set(buttonActions.map(a => a.category))];
+categories.forEach(category => {
+    const button = document.createElement('button');
+    button.textContent = category;
+    applyStyles(button, BUTTON_STYLES);
+    button.onclick = () => {
+        const subcats = buttonActions.filter(a => a.category === category);
+        showSubcategoryPopup(subcats, handleButtonAction);
+    };
+    buttonsContainer.appendChild(button);
+});
+
 
 // ========== INIT ==========
 function init() {
