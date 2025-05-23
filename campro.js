@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.11
+// @version      0.2.016.12
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -14,7 +14,7 @@
 // 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
-// 0.2.016.7- 0.2.016.11- UI & Search Improvements
+// 0.2.016.7- 0.2.016.12- UI & Search Improvements
 
 (function() {
     'use strict';
@@ -4815,23 +4815,24 @@ function createButtonContainer() {
         marginLeft: 'auto',
         marginRight: 'auto',
         height: '36px',
-        position: 'relative' // Add relative positioning
+        position: 'relative' 
     });
 
     // Create buttons container with horizontal scroll
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
-        flexDirection: 'column-reverse', // Reverse the order so results appear above
+        flexDirection: 'column-reverse', 
         gap: '4px',
-        width: '25%', // Match search box width
+        width: '50%', 
         maxHeight: '160px',
         overflowY: 'auto',
         overflowX: 'hidden',
-        marginTop: '-165px', // Move results above search box
-        position: 'absolute', // Position absolutely
-        bottom: '100%', // Position above the container
-        background: '#1f1f1f', // Match container background
+        marginTop: '-165px',
+        position: 'absolute', 
+        right: '0',
+        bottom: '100%', 
+        background: '#1f1f1f',
         borderRadius: '4px',
         boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
     });
