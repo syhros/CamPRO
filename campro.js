@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.5
+// @version      0.2.016
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -11,9 +11,10 @@
 // @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
-// 0.20.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases
-// 0.20.016 - Snooze button added
+// 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
+// 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
+// 0.2.016.7- - UI Improvements
 
 (function() {
     'use strict';
@@ -4622,23 +4623,17 @@
             } else {
                 subject = `★ ${action.topic} ★`;
             }
-
-            // Assign to me if needed
-            const assignButton = getAssignButton();
-            if (assignButton && assignButton.textContent === "Assign to me") {
-                assignButton.click();
-                await delay(30);
-            }
+            
             // Open reply
             const replyToCase = getReplyToCase();
             if (replyToCase) {
                 replyToCase.focus();
-                await delay(30);
+                await delay(300);
             }
             const replyButton = getReplyButton();
             if (replyButton) {
                 replyButton.click();
-                await delay(30);
+                await delay(300);
             }
             // Set fields
             const category = getCategory();
@@ -4740,8 +4735,8 @@ function createButtonContainer() {
 
     // Add snooze buttons
     const snoozeButtons = [
-        { label: '15', hours: 0.25 },
-        { label: '30', hours: 0.5 },
+        { label: '15m', hours: 0.25 },
+        { label: '30m', hours: 0.5 },
         { label: '1h', hours: 1 },
         { label: '2h', hours: 2 },
         { label: '4h', hours: 4 },
@@ -4751,7 +4746,7 @@ function createButtonContainer() {
     snoozeButtons.forEach(({ label, hours }) => {
     const button = document.createElement('button');
     button.textContent = label;
-    button.title = `Set to Case follow up + adds ${label} Snooze time`;
+    button.title = `Add ${label} hours`;
     Object.assign(button.style, {
         padding: '8px',
         width: '40px',
@@ -4764,18 +4759,18 @@ function createButtonContainer() {
         fontSize: '14px'
     });
     button.onclick = async () => {
-        // First click the reply box
+        // First click the reply box 
         const replyToCase = getReplyToCase();
         if (replyToCase) {
             replyToCase.focus();
-            await delay(30); // Wait for field to register click
+            await delay(300); // Wait for field to register click
         }
 
         // Then click the Follow Up button
         const followUpButton = getFollowUpButton();
         if (followUpButton) {
             followUpButton.click();
-            await delay(30); // Wait for follow up time field to appear
+            await delay(300); // Wait for follow up time field to appear
         }
 
         // Finally set the follow up datetime
@@ -4795,7 +4790,8 @@ function createButtonContainer() {
     searchBox.type = 'text';
     searchBox.placeholder = 'Search categories, topics, blurbs...';
     Object.assign(searchBox.style, {
-        width: '25%', // Reduced from 30%
+        width: '25%',
+        minWidth: '25%',
         padding: '8px',
         marginBottom: '10px',
         border: '1px solid #444',
@@ -4805,6 +4801,8 @@ function createButtonContainer() {
         marginLeft: 'auto',
         marginRight: 'auto',
         display: 'block'
+        paddingLeft: '10px',
+        paddingRight: '10px'
     });
 
     // Create buttons container with horizontal scroll
