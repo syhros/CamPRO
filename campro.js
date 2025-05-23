@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.12
+// @version      0.2.016.13
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -14,7 +14,7 @@
 // 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
-// 0.2.016.7- 0.2.016.12- UI & Search Improvements
+// 0.2.016.7- 0.2.016.13- UI & Search Improvements
 
 (function() {
     'use strict';
