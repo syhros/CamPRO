@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.014
+// @version      0.2.015
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -4722,12 +4722,57 @@ function createButtonContainer() {
     const container = document.createElement('div');
     applyStyles(container, CONTAINER_STYLES);
 
+    // Create snooze buttons container
+    const snoozeContainer = document.createElement('div');
+    Object.assign(snoozeContainer.style, {
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '8px',
+        marginBottom: '10px'
+    });
+
+    // Add snooze buttons
+    const snoozeButtons = [
+        { label: '15', hours: 0.25 },
+        { label: '30', hours: 0.5 },
+        { label: '1h', hours: 1 },
+        { label: '2h', hours: 2 },
+        { label: '4h', hours: 4 },
+        { label: '8h', hours: 8 }
+    ];
+
+    snoozeButtons.forEach(({ label, hours }) => {
+        const button = document.createElement('button');
+        button.textContent = label;
+        Object.assign(button.style, {
+            padding: '8px',
+            width: '40px', // Fixed width for square buttons
+            height: '40px',
+            background: '#444',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+        });
+        button.onclick = () => {
+            const followUpDatetime = getFollowUpDatetime();
+            if (followUpDatetime) {
+                const date = new Date();
+                date.setTime(date.getTime() + hours * 60 * 60 * 1000);
+                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                setReactInputValue(followUpDatetime, formattedDate);
+            }
+        };
+        snoozeContainer.appendChild(button);
+    });
+
     // Add search box
     const searchBox = document.createElement('input');
     searchBox.type = 'text';
     searchBox.placeholder = 'Search categories, topics, blurbs...';
     Object.assign(searchBox.style, {
-        width: '30%',
+        width: '25%', // Reduced from 30%
         padding: '8px',
         marginBottom: '10px',
         border: '1px solid #444',
@@ -4739,31 +4784,39 @@ function createButtonContainer() {
         display: 'block'
     });
 
-    // Create buttons container
+    // Create buttons container with horizontal scroll
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '8px'
+        gap: '8px',
+        maxHeight: '300px', // Set maximum height
+        overflowY: 'auto', // Enable vertical scroll
+        overflowX: 'hidden' // Hide horizontal scroll
     });
 
-    // Search functionality
+    // Update button styles to have minimum width
+    const UPDATED_BUTTON_STYLES = {
+        ...BUTTON_STYLES,
+        minWidth: '200px', // Add minimum width
+        flex: '0 0 auto' // Prevent shrinking
+    };
+
+    // Search functionality remains the same but uses updated button styles
     searchBox.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         
         let searchTimeout;
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
-            // Clear existing buttons
             buttonsContainer.innerHTML = '';
             
             if (!query) {
-                // Show category buttons if no search
                 const categories = [...new Set(buttonActions.map(a => a.category))];
                 categories.forEach(category => {
                     const button = document.createElement('button');
                     button.textContent = category;
-                    applyStyles(button, BUTTON_STYLES);
+                    applyStyles(button, UPDATED_BUTTON_STYLES);
                     button.onclick = () => {
                         const subcats = buttonActions.filter(a => a.category === category);
                         showSubcategoryPopup(subcats, handleButtonAction);
@@ -4771,17 +4824,16 @@ function createButtonContainer() {
                     buttonsContainer.appendChild(button);
                 });
             } else {
-                // Show search results
                 const results = searchActions(query);
                 results.forEach(action => {
                     const button = document.createElement('button');
                     button.textContent = `${action.category} > ${action.subcategory} > ${action.blurbName}`;
-                    applyStyles(button, BUTTON_STYLES);
+                    applyStyles(button, UPDATED_BUTTON_STYLES);
                     button.onclick = () => handleButtonAction(action);
                     buttonsContainer.appendChild(button);
                 });
             }
-        }, 300); // Debounce search for performance
+        }, 300);
     });
 
     // Hide/show toggle
@@ -4795,6 +4847,7 @@ function createButtonContainer() {
         toggleBtn.textContent = hidden ? '▼' : '▲';
     };
 
+    container.appendChild(snoozeContainer);
     container.appendChild(toggleBtn);
     container.appendChild(searchBox);
     container.appendChild(buttonsContainer);
