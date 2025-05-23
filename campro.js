@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.15
+// @version      0.2.016.16
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -11,10 +11,10 @@
 // @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
-// 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases
+// 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases 
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
-// 0.2.016.7- 0.2.016.15- UI & Search Improvements / Removed original buttons.
+// 0.2.016.7- 0.2.016.16- UI & Search Improvements
 
 (function() {
     'use strict';
@@ -4409,7 +4409,7 @@
     };
 
 
-
+    
     // Each button can have multiple actions (for popup), each with raisedBy, blurb, snooze, etc.
     const buttonActions = generateButtonActions(categoriesDictionary);
 
@@ -4429,7 +4429,7 @@
                    for (const [blurbName, blurbData] of Object.entries(blurbs)) {
                         // Check if blurbData contains settings object as third element
                         const settings = blurbData[2] || {};
-
+                    
                         actions.push({
                             category,
                             subcategory,
@@ -4624,7 +4624,7 @@
             } else {
                 subject = `★ ${action.topic} ★`;
             }
-
+            
             // Open reply
             const replyToCase = getReplyToCase();
             if (replyToCase) {
@@ -4704,14 +4704,14 @@
 // ========== UI CREATION ==========
 function searchActions(query) {
     if (!query) return [];
-
+    
     const searchTerms = query.toLowerCase().trim().split(/\s+/);
-
+    
     return buttonActions.filter(action => {
         const searchableText = [
             action.category,
             action.subcategory,
-            action.topic,
+            action.topic, 
             action.blurbName,
             action.sop,
             action.blurb
@@ -4722,32 +4722,31 @@ function searchActions(query) {
         // Sort by how many search terms match at the start of the text
         const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
         const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
-
+        
         let aScore = 0;
         let bScore = 0;
-
+        
         searchTerms.forEach(term => {
             if (aText.startsWith(term)) aScore++;
             if (bText.startsWith(term)) bScore++;
         });
-
+        
         return bScore - aScore;
     });
 }
-
+    
 function createButtonContainer() {
+    // Create the main container
     const container = document.createElement('div');
     applyStyles(container, CONTAINER_STYLES);
 
-    // Create snooze buttons container
+    // Create snooze container
     const snoozeContainer = document.createElement('div');
     Object.assign(snoozeContainer.style, {
         display: 'flex',
         justifyContent: 'center',
-        gap: '8px',
-        marginBottom: '10px',
-        marginTop: '10px',
-        marginLeft: '6px'
+        gap: '4px',
+        marginBottom: '10px'
     });
 
     // Add snooze buttons
@@ -4765,7 +4764,7 @@ function createButtonContainer() {
     button.textContent = label;
     button.title = `Add ${label} hours`;
     Object.assign(button.style, {
-        padding: '6px',
+        padding: '4px',
         width: '30px',
         height: '30px',
         background: '#444',
@@ -4776,7 +4775,7 @@ function createButtonContainer() {
         fontSize: '14px'
     });
     button.onclick = async () => {
-        // First click the reply box
+        // First click the reply box 
         const replyToCase = getReplyToCase();
         if (replyToCase) {
             replyToCase.focus();
@@ -4807,7 +4806,7 @@ function createButtonContainer() {
     searchBox.type = 'text';
     searchBox.placeholder = 'Search categories, topics, blurbs...';
     Object.assign(searchBox.style, {
-        width: '25%',
+        width: '50%',
         minWidth: '25%',
         padding: '8px 12px',
         border: '1px solid #444',
@@ -4817,23 +4816,23 @@ function createButtonContainer() {
         marginLeft: 'auto',
         marginRight: 'auto',
         height: '36px',
-        position: 'relative'
+        position: 'relative' 
     });
 
     // Create buttons container with horizontal scroll
     const buttonsContainer = document.createElement('div');
     Object.assign(buttonsContainer.style, {
         display: 'flex',
-        flexDirection: 'column-reverse',
+        flexDirection: 'column-reverse', 
         gap: '4px',
-        width: '50%',
+        width: '50%', 
         maxHeight: '160px',
         overflowY: 'auto',
         overflowX: 'hidden',
         marginTop: '-165px',
-        position: 'absolute',
+        position: 'absolute', 
         right: '0',
-        bottom: '100%',
+        bottom: '100%', 
         background: '#1f1f1f',
         borderRadius: '4px',
         boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
@@ -4856,12 +4855,12 @@ function createButtonContainer() {
     // Search functionality remains the same but uses updated button styles
     searchBox.addEventListener('input', (e) => {
         const query = e.target.value.trim();
-
+        
         let searchTimeout;
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             buttonsContainer.innerHTML = '';
-
+            
             if (!query) {
                 const categories = [...new Set(buttonActions.map(a => a.category))];
                 categories.forEach(category => {
@@ -4902,6 +4901,22 @@ function createButtonContainer() {
     container.appendChild(toggleBtn);
     container.appendChild(searchBox);
     container.appendChild(buttonsContainer);
+    document.body.appendChild(container);
+
+    // Initialize with category buttons
+    const categories = [...new Set(buttonActions.map(a => a.category))];
+    categories.forEach(category => {
+        const button = document.createElement('button');
+        button.textContent = category;
+        applyStyles(button, BUTTON_STYLES);
+        button.onclick = () => {
+            const subcats = buttonActions.filter(a => a.category === category);
+            showSubcategoryPopup(subcats, handleButtonAction);
+        };
+        buttonsContainer.appendChild(button);
+    });
+
+    document.body.appendChild(container);
 }
 
 // ========== INIT ==========
