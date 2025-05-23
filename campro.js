@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.011
+// @version      0.2.012
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
 // @grant        none
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/test-campro.js
-// @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/test-campro.js
+// @updateURL    https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
+// @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
 (function() {
@@ -4698,14 +4698,19 @@
 function searchActions(query) {
     if (!query) return [];
     
-    query = query.toLowerCase();
+    const searchTerms = query.toLowerCase().trim().split(/\s+/);
+    
     return buttonActions.filter(action => {
-        return action.category.toLowerCase().includes(query) ||
-               action.subcategory.toLowerCase().includes(query) ||
-               action.topic.toLowerCase().includes(query) ||
-               action.blurbName.toLowerCase().includes(query) ||
-               action.sop.toLowerCase().includes(query) ||
-               action.blurb.toLowerCase().includes(query);
+        const searchableText = [
+            action.category,
+            action.subcategory,
+            action.topic,
+            action.blurbName,
+            action.sop,
+            action.blurb
+        ].map(text => (text || '').toLowerCase()).join(' ');
+
+        return searchTerms.every(term => searchableText.includes(term));
     });
 }
     
@@ -4826,3 +4831,5 @@ function buildSubject(site, topic) {
     }
     return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
 }
+
+})();
