@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.14
+// @version      0.2.016.15
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -14,7 +14,7 @@
 // 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
-// 0.2.016.7- 0.2.016.14- UI & Search Improvements
+// 0.2.016.7- 0.2.016.15- UI & Search Improvements / Removed original buttons.
 
 (function() {
     'use strict';
@@ -4902,21 +4902,6 @@ function createButtonContainer() {
     container.appendChild(toggleBtn);
     container.appendChild(searchBox);
     container.appendChild(buttonsContainer);
-
-    // Initialize with category buttons
-    const categories = [...new Set(buttonActions.map(a => a.category))];
-    categories.forEach(category => {
-        const button = document.createElement('button');
-        button.textContent = category;
-        applyStyles(button, BUTTON_STYLES);
-        button.onclick = () => {
-            const subcats = buttonActions.filter(a => a.category === category);
-            showSubcategoryPopup(subcats, handleButtonAction);
-        };
-        buttonsContainer.appendChild(button);
-    });
-
-    document.body.appendChild(container);
 }
 
 // ========== INIT ==========
