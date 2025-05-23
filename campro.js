@@ -4800,7 +4800,7 @@ function createButtonContainer() {
         color: '#fff',
         marginLeft: 'auto',
         marginRight: 'auto',
-        display: 'block'
+        display: 'block',
         paddingLeft: '10px',
         paddingRight: '10px'
     });
