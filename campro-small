@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         CamPRO - WIMS Enhancer
+// @name         CamPRO - TEST
 // @namespace    http://tampermonkey.net/
-// @version      0.3.001.01
-// @description  Streamlines WIMS case management with quick action buttons and improved UI
-// @author       camrees &
+// @version      0.2.016.30
+// @description  Streamlines WIMS case management with quick action buttons
+// @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
 // @grant        none
 // @run-at       document-end
@@ -11,8 +11,11 @@
 // @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
-// 0.3.001.01 - Added diagnostics for quickButtons visibility
-// 0.3.001.00 - Added Quick Buttons (Assign, Placeholder Resolve), Debounced Search, Corrected container error
+// 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases
+// 0.2.016 - Snooze button added
+// 0.2.016.5 - Minor snooze button update
+// 0.2.016.7- 0.2.016.19 - UI & Search Improvements & Original button removal
+// 0.2.016.22 - Revered 0.2.016.20
 
 (function() {
     'use strict';
@@ -23,18 +26,18 @@
         bottom: '0',
         left: '0',
         width: '100vw',
+        height: '70px',
         background: '#1f1f1f',
-        padding: '10px 0 0 0', // Added padding top
+        padding: '0',
         display: 'flex',
-        flexDirection: 'column', // Changed to column for better layout of internal containers
         alignItems: 'center',
         zIndex: '9998',
         boxShadow: '0 -2px 10px rgba(0,0,0,0.3)',
         transition: 'transform 0.3s',
-        height: 'auto' // Keep auto for content
+        height: 'auto'
     };
 
-    const BUTTON_STYLES = { // General style for action buttons from search
+    const BUTTON_STYLES = {
         flex: '1 1 0',
         height: '90%',
         margin: '0 4px',
@@ -50,24 +53,30 @@
         textOverflow: 'ellipsis',
     };
 
-    const CONTROL_BUTTON_STYLES = { // For Snooze and Quick Action buttons
-        padding: '6px 10px',
-        minWidth: '30px',
-        height: '30px',
-        background: '#444',
+    const POPUP_STYLES = {
+        position: 'fixed',
+        bottom: '80px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: '#222',
         color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '13px',
-        margin: '0 3px', // Added margin for spacing
+        borderRadius: '8px',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+        zIndex: '10000',
+        minWidth: '600px',
+        maxWidth: '90vw',
+        padding: '24px 16px',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '16px',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        flexDirection: 'row',
+        gap: '24px',
     };
 
-
     // ========== DATA STRUCTURE EXAMPLES ==========
+    // Mapping of every category, site and emails.
+    // GLOBAL CONSTANTS
+    // Mapping of attributes to sites
     const siteDictionary = {
         "UK": {
             "UK": {
@@ -99,6 +108,7 @@
         },
     };
 
+    // Construct mapping of every site to its corresponding attributes
     let siteAttributes = {};
     for (const [region, countries] of Object.entries(siteDictionary)) {
         for (const [country, types] of Object.entries(countries)) {
@@ -110,12 +120,23 @@
         }
     };
 
+    // Mapping of FC emails with escalations
     const fcEmailDictionary = {
         "ARRO-WORCESTE-GB":{
             'POC': 'networkcontrol@arrowxl.co.uk',
         },
+        "BCN1": {
+            'Outbound Dock': 'bcn1-ship-managers@amazon.com',
+            'Outbound Ops (L6 Escalation)': 'bcn1-outbound-ops@amazon.com',
+            'Inbound Dock': 'bcn1-dock-manager@amazon.com',
+            'Inbound Ops (L6 Escalation)': 'bcn1-inbound-ops@amazon.com',
+            'TAM': 'adriarub@amazon.es',
+            'TOM': 'BCN1-eu-tom-team@amazon.com ',
+            'TOM leads': 'BCN1-eu-tom-team@amazon.com',
+        },
     };
 
+    // Mapping of every category code to its topics
     const categoriesDictionary = {
         "FRONTLINE": {
             "_____________________________ FRONTLINE _____________________________": {
@@ -145,13 +166,43 @@
                         "Update the original VRID from DROP to DETACHED for the same carrier, anticipating the loading time by 30 minutes and updating the loading type to \u201cLive\u201d. \nLoop origin site and close the case",
                         "Hello Carrier,\nThe trailer has not been dropped at least 12 hours in advance as per procedure and trailer cannot be preloaded as planned. For this reason, please arrive with your own trailer.\nPlease accept the new VRID with the below details:\n\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 New SAT:\n\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 Equipment type: DETACHED_TRAILER"
                     ]
+                },
+                "Missing Drop": {
+                    "Commercial carrier confirmed that they can not provide drop": [
+                        "Modify the equipment type from DROP to DETACHED. \nAnticipate the SAT by 0.5 hours and change the loading type to \u201cLive\u201d.\nUpdate and close the case. ",
+                        "Hello Carrier,\n The trailer has been not dropped at least 12 hours in advance as per procedure and trailer cannot be preloaded as planned. For this reason, please arrive with your own trailer.\nVRID has been updated with the below details:\n\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 New SAT:\nEquipment type: DETACHED_TRAILER \nClosing case"
+                     ]
+                },
+                "Request to change equipment type": {
+                    "Carrier request to change equipment type": [
+                        "If Carrier can't perform with scheduled equipment, they need to reject the run via Relay.",
+			            ""
+                     ]
+                },
+                "Carrier reporting lack of ATS Prime Trailers": {
+                    "Carrier reporting lack of ATS Prime Trailers": [
+                        "Check for duplicated topic from Site. \nIf found -> close duplicated case. \nIf Site input not found -> Loop in Origin site for feedback, and upon confirmation continue as 'Site reporting lack of empty trailers'",
+			            "Hello ,\n"
+                   ],
+                },
+                "Site lost Carrier's safety equipment": {
+                    "": [
+                        "",
+                        ""
+                    ]
                 }
-            }
+            },
         },
     };
 
+
+
+    // Each button can have multiple actions (for popup), each with raisedBy, blurb, snooze, etc.
     const buttonActions = generateButtonActions(categoriesDictionary);
 
+    /**
+     * Flattens the categoriesDictionary into an array of button actions
+     */
     function generateButtonActions(categoriesDictionary) {
         const actions = [];
         for (const [category, subcats] of Object.entries(categoriesDictionary)) {
@@ -163,25 +214,36 @@
 
                 for (const [topic, blurbs] of Object.entries(topics)) {
                    for (const [blurbName, blurbData] of Object.entries(blurbs)) {
+                        // Check if blurbData contains settings object as third element
                         const settings = blurbData[2] || {};
+
                         actions.push({
-                            category, subcategory, topic, blurbName,
-                            sop: blurbData[0], blurb: blurbData[1],
-                            raisedBy, siteInput,
-                            snooze: settings.snooze || null, status: settings.status || null
-                        });
-                    }
+                            category,
+                            subcategory,
+                        topic,
+                        blurbName,
+                        sop: blurbData[0],
+                        blurb: blurbData[1],
+                        raisedBy,
+                        siteInput,
+                        // Add optional settings
+                        snooze: settings.snooze || null,
+                        status: settings.status || null
+                    });
                 }
             }
         }
-        return actions;
     }
+    return actions;
+}
 
+    // ========== DOM HELPERS ==========
     function applyStyles(element, styles) {
         Object.assign(element.style, styles);
     }
 
-    function getElement(doc, path) {
+    // ========== ELEMENT GETTERS ==========
+    function getElement(document, path) {
         return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
     }
     function getAddSubjectIframe() {
@@ -212,7 +274,7 @@
         return doc ? getElement(doc, "//input[@name='dueDate' and @type='datetime-local']") : null;
     }
     function getAssignButton() {
-        return getElement(document, "//button[normalize-space()='Assign to me']");
+        return getElement(document, "//button[text()='Assign to me']");
     }
     function getReplyToCase() {
         const doc = getAddSubjectIframeDoc();
@@ -224,30 +286,38 @@
     }
     function getFollowUpButton() {
         const addSubjectIframeDoc = getAddSubjectIframeDoc();
+
         return getElement(addSubjectIframeDoc, "//a[text()='Case Follow Up']");
     };
 
+    // ========== REACT INPUT HELPERS ==========
     function setReactInputValue(input, value) {
         if (!input) return;
         let lastValue = input.value;
         input.value = value;
         let event = new Event('input', { bubbles: true });
+        event.simulated = true;
         let tracker = input._valueTracker;
-        if (tracker) tracker.setValue(lastValue);
+        if (tracker) {
+            tracker.setValue(lastValue);
+        }
         input.dispatchEvent(event);
     }
     function setReactSelectValue(selectElement, newValue) {
         if (!selectElement) return;
-        selectElement.value = newValue;
+        let setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+        setter.call(selectElement, newValue);
         const event = new Event('change', { bubbles: true });
         selectElement.dispatchEvent(event);
     }
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+    // ========== MAIN BUTTON ACTION ==========
     async function handleButtonAction(action) {
         try {
             let subject = action.topic;
             if (action.siteInput) {
+                // Prompt for site code
                 const site = prompt("Enter site code (e.g. BHX1):");
                 if (!site) return;
                 subject = buildSubject(site.toUpperCase(), action.topic);
@@ -255,316 +325,295 @@
                 subject = `★ ${action.topic} ★`;
             }
 
-            const replyToCaseInput = getReplyToCase();
-            if (replyToCaseInput) {
-                replyToCaseInput.focus();
-                await delay(100);
+            // Open reply
+            const replyToCase = getReplyToCase();
+            if (replyToCase) {
+                replyToCase.focus();
+                await delay(300);
             }
-
             const replyButton = getReplyButton();
             if (replyButton) {
                 replyButton.click();
                 await delay(300);
-            } else {
-                if (!getReplyTextbox()) {
-                    showPopup('Could not activate reply area.', true);
-                    return;
-                }
             }
-
-            const categorySelect = getCategory();
-            if (categorySelect) setReactSelectValue(categorySelect, action.category);
+            // Set fields
+            const category = getCategory();
+            if (category) setReactSelectValue(category, action.category);
             const subjectInput = getAddSubject();
             if (subjectInput) setReactInputValue(subjectInput, subject);
             const replyTextBox = getReplyTextbox();
             if (replyTextBox) setReactInputValue(replyTextBox, action.blurb);
             const statusDropdown = getStatusDropdown();
-            if (statusDropdown && action.status) setReactSelectValue(statusDropdown, action.status);
+            if (statusDropdown) setReactSelectValue(statusDropdown, action.status);
 
+            // Set snooze if needed
             if (action.snooze) {
                 const followUpDatetime = getFollowUpDatetime();
                 if (followUpDatetime) {
+                    function pad(number) { return (number < 10) ? '0' + number : number; }
                     let date = new Date();
                     date.setTime(date.getTime() + action.snooze * 60 * 60 * 1000);
-                    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                    const formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
                     setReactInputValue(followUpDatetime, formattedDate);
-                } else {
-                    showPopup('Follow-up date field not found for snooze.', true);
                 }
             }
+            // Show confirmation
             showPopup(`Applied: ${subject}`);
         } catch (error) {
-            console.error('[CamPRO] Error applying action:', error);
-            showPopup('Error applying action. Check console for details.', true);
+            console.error('Error applying action:', error);
+            showPopup('Error applying action. Please try again.', true);
         }
     }
 
+    // ========== SIMPLE POPUP ==========
     function showPopup(message, isError = false) {
+        // Remove any existing popup
         const existingPopup = document.querySelector('.wims-enhancer-popup');
         if (existingPopup) existingPopup.remove();
+
+        // Create popup
         const popup = document.createElement('div');
         popup.classList.add('wims-enhancer-popup');
         Object.assign(popup.style, {
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            padding: '25px 35px', background: '#000000', color: '#ffffff',
-            borderLeft: isError ? '5px solid #F44336' : '5px solid #2196F3',
-            borderRadius: '6px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', zIndex: '10001',
-            fontFamily: '"Amazon Ember", Arial, sans-serif', minWidth: '350px', maxWidth: '600px',
-            fontSize: '15px', textAlign: 'center', opacity: '0',
-            transition: 'opacity 0.3s ease-in-out'
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            padding: '35px',
+            background: '#000000',
+            color: '#ffffff',
+            borderLeft: isError ? '4px solid #F44336' : '4px solid #2196F3',
+            borderRadius: '4px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+            zIndex: '9999',
+            fontFamily: 'Arial, sans-serif',
+            minWidth: '400px',
+            maxWidth: '800px',
+            fontSize: '16px',
         });
         popup.textContent = message;
         document.body.appendChild(popup);
-        setTimeout(() => { popup.style.opacity = '1'; }, 50);
+
         setTimeout(() => {
             popup.style.opacity = '0';
-            setTimeout(() => popup.remove(), 300);
-        }, 2500);
+            popup.style.transition = 'opacity 0.5s';
+            setTimeout(() => popup.remove(), 500);
+        }, 2000);
     }
 
-    function searchActions(query) {
-        if (!query) return [];
-        const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
-        if (searchTerms.length === 0) return [];
-        return buttonActions.filter(action => {
-            const searchableText = [
-                action.category, action.subcategory, action.topic,
-                action.blurbName, action.sop, action.blurb
-            ].map(text => (text || '').toLowerCase()).join(' ');
-            return searchTerms.every(term => searchableText.includes(term));
-        }).sort((a, b) => {
-            const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
-            const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
-            let aScore = 0, bScore = 0;
-            searchTerms.forEach(term => {
-                if (aText.startsWith(term)) aScore++;
-                if (bText.startsWith(term)) bScore++;
-            });
-            return bScore - aScore;
-        });
-    }
+// ========== UI CREATION ==========
+function searchActions(query) {
+    if (!query) return [];
 
-    function createStyledButton(text, title, styles, onClickAction) {
-        const button = document.createElement('button');
-        button.textContent = text;
-        if (title) button.title = title;
-        applyStyles(button, styles);
-        button.onclick = onClickAction;
-        return button;
-    }
+    const searchTerms = query.toLowerCase().trim().split(/\s+/);
 
-    function debounce(func, delay) {
-        let timeoutId;
-        return function(...args) {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                func.apply(this, args);
-            }, delay);
-        };
-    }
+    return buttonActions.filter(action => {
+        const searchableText = [
+            action.category,
+            action.subcategory,
+            action.topic,
+            action.blurbName,
+            action.sop,
+            action.blurb
+        ].map(text => (text || '').toLowerCase()).join(' ');
 
-    function createButtonContainer() {
-        const mainContainer = document.createElement('div');
-        applyStyles(mainContainer, CONTAINER_STYLES);
+        return searchTerms.every(term => searchableText.includes(term));
+    }).sort((a, b) => {
+        // Sort by how many search terms match at the start of the text
+        const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
+        const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
 
-        const controlsRow = document.createElement('div');
-        Object.assign(controlsRow.style, {
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-            gap: '10px', marginBottom: '10px', width: '100%', padding: '0 10px'
+        let aScore = 0;
+        let bScore = 0;
+
+        searchTerms.forEach(term => {
+            if (aText.startsWith(term)) aScore++;
+            if (bText.startsWith(term)) bScore++;
         });
 
-        const snoozeContainer = document.createElement('div');
-        Object.assign(snoozeContainer.style, { display: 'flex', justifyContent: 'center', gap: '6px' });
-        const snoozeButtons = [
-            { label: '15m', hours: 0.25 }, { label: '30m', hours: 0.5 },
-            { label: '1h', hours: 1 }, { label: '2h', hours: 2 },
-            { label: '4h', hours: 4 }, { label: '8h', hours: 8 }
-        ];
-        snoozeButtons.forEach(({ label, hours }) => {
-            const button = createStyledButton(label, `Snooze for ${label}`, CONTROL_BUTTON_STYLES, async () => {
-                const replyToCaseInput = getReplyToCase();
-                if (replyToCaseInput) { replyToCaseInput.focus(); await delay(100); }
-                const followUpButton = getFollowUpButton();
-                if (followUpButton) { followUpButton.click(); await delay(300); } 
-                else { showPopup('Follow Up button not found.', true); return; }
-                const followUpDatetime = getFollowUpDatetime();
-                if (followUpDatetime) {
-                    const date = new Date();
-                    date.setTime(date.getTime() + hours * 60 * 60 * 1000);
-                    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                    setReactInputValue(followUpDatetime, formattedDate);
-                    showPopup(`Snoozed for ${label}.`);
-                } else {
-                    showPopup('Follow-up date field not found.', true);
-                }
-            });
-            snoozeContainer.appendChild(button);
-        });
-        controlsRow.appendChild(snoozeContainer);
+        return bScore - aScore;
+    });
+}
 
-        const quickActionsContainer = document.createElement('div');
-        Object.assign(quickActionsContainer.style, {
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '6px',
-            // --- DIAGNOSTIC STYLES START ---
-            backgroundColor: 'green', // Bright background for visibility
-            padding: '5px',           // Some padding to ensure it has dimensions
-            border: '2px solid yellow' // A very obvious border
-            // --- DIAGNOSTIC STYLES END ---
-        });
-        console.log('[CamPRO] Creating quickActionsContainer:', quickActionsContainer); // Diagnostic log
+function createButtonContainer() {
+    // Create the main container
+    const container = document.createElement('div');
+    applyStyles(container, CONTAINER_STYLES);
 
-        const quickButtons = [
-            {
-                label: 'Assign', title: 'Assign case to me', action: async () => {
-                    const assignBtn = getAssignButton();
-                    if (assignBtn) {
-                        assignBtn.click();
-                        showPopup('Case assigned to me.');
-                    } else {
-                        showPopup("'Assign to me' button not found.", true);
-                    }
-                }
-            },
-            {
-                label: 'Resolve', title: 'Quick resolve (placeholder)', action: async () => {
-                    showPopup('Quick Resolve clicked (Placeholder - implement action).');
-                }
-            }
-        ];
-        
-        if (quickButtons.length > 0) {
-             console.log('[CamPRO] quickButtons array has items:', quickButtons.length);
-            quickButtons.forEach(({ label, title, action }) => {
-                const button = createStyledButton(label, title, CONTROL_BUTTON_STYLES, action);
-                quickActionsContainer.appendChild(button);
-                 console.log(`[CamPRO] Appended quick button: ${label}`);
-            });
-        } else {
-            console.log('[CamPRO] quickButtons array is empty.');
+    // Create snooze container
+    const snoozeContainer = document.createElement('div');
+    Object.assign(snoozeContainer.style, {
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '6px',
+        marginBottom: '10px',
+        paddingTop: '10px',
+        paddingLeft: '10px'
+    });
+
+    // Add snooze buttons
+    const snoozeButtons = [
+        { label: '15', hours: 0.25 },
+        { label: '30', hours: 0.5 },
+        { label: '1h', hours: 1 },
+        { label: '2h', hours: 2 },
+        { label: '4h', hours: 4 },
+        { label: '8h', hours: 8 }
+    ];
+
+    snoozeButtons.forEach(({ label, hours }) => {
+    const button = document.createElement('button');
+    button.textContent = label;
+    button.title = `Add ${label} hours`;
+    Object.assign(button.style, {
+        padding: '4px',
+        width: '30px',
+        height: '30px',
+        background: '#444',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '14px'
+    });
+    button.onclick = async () => {
+        // First click the reply box
+        const replyToCase = getReplyToCase();
+        if (replyToCase) {
+            replyToCase.focus();
+            await delay(300); // Wait for field to register click
         }
-        
-        controlsRow.appendChild(quickActionsContainer);
-        console.log('[CamPRO] Appended quickActionsContainer to controlsRow.');
-        mainContainer.appendChild(controlsRow);
 
-        const searchAreaContainer = document.createElement('div');
-        Object.assign(searchAreaContainer.style, {
-            position: 'relative', width: '40%', minWidth: '300px', maxWidth: '600px',
-            margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center'
-        });
-        const searchBox = document.createElement('input');
-        searchBox.type = 'text';
-        searchBox.placeholder = 'Search categories, topics, blurbs...';
-        Object.assign(searchBox.style, {
-            width: '100%', padding: '10px 12px', border: '1px solid #555',
-            borderRadius: '4px', background: '#333', color: '#fff',
-            height: '40px', fontSize: '14px', boxSizing: 'border-box'
-        });
-        searchAreaContainer.appendChild(searchBox);
-        const buttonsContainer = document.createElement('div');
-        Object.assign(buttonsContainer.style, {
-            display: 'flex', flexDirection: 'column', gap: '4px', width: '100%',
-            maxHeight: '160px', overflowY: 'auto', overflowX: 'hidden',
-            background: '#2a2a2a', borderRadius: '0 0 4px 4px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)', marginTop: '0px'
-        });
-        searchAreaContainer.appendChild(buttonsContainer);
-        mainContainer.appendChild(searchAreaContainer);
+        // Then click the Follow Up button
+        const followUpButton = getFollowUpButton();
+        if (followUpButton) {
+            followUpButton.click();
+            await delay(300); // Wait for follow up time field to appear
+        }
 
-        const debouncedSearch = debounce((query) => {
+        // Finally set the follow up datetime
+        const followUpDatetime = getFollowUpDatetime();
+        if (followUpDatetime) {
+            const date = new Date();
+            date.setTime(date.getTime() + hours * 60 * 60 * 1000);
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            setReactInputValue(followUpDatetime, formattedDate);
+        }
+    };
+    snoozeContainer.appendChild(button);
+});
+
+    // Add search box
+    const searchBox = document.createElement('input');
+    searchBox.type = 'text';
+    searchBox.placeholder = 'Search categories, topics, blurbs...';
+    Object.assign(searchBox.style, {
+        width: '40%',
+        minWidth: '25%',
+        padding: '8px 12px',
+        border: '1px solid #444',
+        borderRadius: '4px',
+        background: '#333',
+        color: '#fff',
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        height: '36px',
+        position: 'absolute',
+        right : '20px'
+    });
+
+    // Create buttons container with horizontal scroll
+    const buttonsContainer = document.createElement('div');
+    Object.assign(buttonsContainer.style, {
+        display: 'flex',
+        flexDirection: 'column-reverse',
+        gap: '4px',
+        width: '40%',
+        maxHeight: '160px',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        marginTop: '-165px',
+        position: 'absolute',
+        right: '20px',
+        bottom: '100%',
+        background: '#1f1f1f',
+        borderRadius: '4px',
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
+    });
+
+    // Update button styles to have minimum width
+    const UPDATED_BUTTON_STYLES = {
+        ...BUTTON_STYLES,
+        width: '100%',
+        flex: '0 0 auto',
+        height: '40px',
+        margin: '0px',
+        padding: '8px 12px',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        textAlign: 'left'
+    };
+
+    // Search functionality (keep existing search event listener)
+    searchBox.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+
+        let searchTimeout;
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
             buttonsContainer.innerHTML = '';
+
             if (query) {
                 const results = searchActions(query);
-                if (results.length === 0) {
-                    const noResultsMsg = document.createElement('div');
-                    noResultsMsg.textContent = 'No actions found.';
-                    Object.assign(noResultsMsg.style, { padding: '10px', color: '#888', textAlign: 'center'});
-                    buttonsContainer.appendChild(noResultsMsg);
-                } else {
-                    results.forEach(action => {
-                        const button = document.createElement('button');
-                        let buttonText = `${action.topic} > ${action.blurbName}`;
-                        if (action.subcategory && !action.subcategory.startsWith("_")) {
-                             buttonText = `${action.subcategory} > ${buttonText}`;
-                        }
-                        button.textContent = buttonText;
-                        button.title = `Category: ${action.category}\nSOP: ${action.sop.substring(0,100)}...`;
-                        applyStyles(button, {
-                            ...BUTTON_STYLES, width: '100%', flex: '0 0 auto', height: 'auto',
-                            minHeight: '38px', margin: '0px', padding: '8px 12px',
-                            whiteSpace: 'normal', textAlign: 'left', background: '#3a3a3a',
-                            borderBottom: '1px solid #4a4a4a'
-                        });
-                        button.onmouseover = () => button.style.background = '#4f4f4f';
-                        button.onmouseout = () => button.style.background = '#3a3a3a';
-                        button.onclick = () => {
-                            handleButtonAction(action);
-                            searchBox.value = '';
-                            buttonsContainer.innerHTML = '';
-                        };
-                        buttonsContainer.appendChild(button);
-                    });
-                }
+                results.forEach(action => {
+                    const button = document.createElement('button');
+                    button.textContent = `${action.subcategory} > ${action.topic} > ${action.blurbName}`;
+                    applyStyles(button, UPDATED_BUTTON_STYLES);
+                    button.onclick = () => handleButtonAction(action);
+                    buttonsContainer.appendChild(button);
+                });
             }
         }, 300);
-        searchBox.addEventListener('input', (e) => debouncedSearch(e.target.value.trim()));
-        searchBox.addEventListener('focus', (e) => {
-            if(!e.target.value.trim()) debouncedSearch('');
-        });
+    });
 
-        const toggleBtn = document.createElement('button');
-        toggleBtn.textContent = '▼';
-        Object.assign(toggleBtn.style, {
-            position: 'absolute', right: '10px', top: '-28px', background: '#444',
-            color: '#fff', border: 'none', borderRadius: '6px 6px 0 0',
-            padding: '4px 12px', cursor: 'pointer', zIndex: '10001', fontSize: '14px'
-        });
-        let isBarHidden = false;
-        mainContainer.style.transform = 'translateY(0)';
-        toggleBtn.onclick = () => {
-            isBarHidden = !isBarHidden;
-            mainContainer.style.transform = isBarHidden ? `translateY(calc(100% - 0px))` : 'translateY(0)';
-            toggleBtn.textContent = isBarHidden ? '▲' : '▼';
-            if (!isBarHidden && !searchBox.value.trim()) buttonsContainer.innerHTML = '';
-        };
-        mainContainer.style.position = 'fixed';
-        mainContainer.appendChild(toggleBtn);
-        document.body.appendChild(mainContainer);
-    }
+    // Hide/show toggle
+    const toggleBtn = document.createElement('button');
+    toggleBtn.textContent = '▲';
+    toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
+    let hidden = false;
+    toggleBtn.onclick = () => {
+        hidden = !hidden;
+        container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
+        toggleBtn.textContent = hidden ? '▼' : '▲';
+    };
 
-    function init() {
-        if (getAddSubjectIframe()) {
-            createButtonContainer();
-            console.log('[CamPRO] Enhanced WIMS Interface: Initialized');
-        } else {
-            console.log('[CamPRO] Enhanced WIMS Interface: Reply widget not found, not initializing UI.');
-        }
-    }
+    container.appendChild(snoozeContainer);
+    container.appendChild(toggleBtn);
+    container.appendChild(searchBox);
+    container.appendChild(buttonsContainer);
+    document.body.appendChild(container);
+}
 
-    let initAttempts = 0;
-    const maxInitAttempts = 20;
-    function attemptInit() {
-        initAttempts++;
-        if (getAddSubjectIframeDoc() && getReplyToCase()) {
-            init();
-        } else if (initAttempts < maxInitAttempts) {
-            setTimeout(attemptInit, 500);
-        } else {
-            console.log('[CamPRO] Enhanced WIMS Interface: Failed to initialize. Key elements not found.');
-        }
-    }
+// ========== INIT ==========
+function init() {
+    createButtonContainer();
+    console.log('Enhanced WIMS Interface: Initialized');
+}
 
-    if (document.readyState === 'complete') {
-        attemptInit();
-    } else {
-        window.addEventListener('load', attemptInit);
-    }
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
-    function buildSubject(site, topic) {
-        const attr = siteAttributes[site] || { region: 'N/A', country: 'N/A', type: 'N/A' };
-        return `★ [${attr.region}][${attr.country}][${site}][${attr.type}] ${topic} ★`;
+// ========== SUBJECT BUILDER ==========
+function buildSubject(site, topic) {
+    const attr = siteAttributes[site] || {};
+    if (attr.region === 'UK') {
+        return `★ [${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
     }
+    return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+}
 
 })();
