@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - TEST
 // @namespace    http://tampermonkey.net/
-// @version      0.3.001.1
+// @version      0.3.001.2
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -40,8 +40,8 @@
     };
 
     const QUICK_BUTTON_STYLES = {
-        height: '50px',
-        width: '65px',
+        height: '20px',
+        width: '50px',
         margin: '2px 4px',
         background: '#444',
         color: 'white',
@@ -51,8 +51,8 @@
         fontSize: '11px',
         transition: 'background-color 0.2s',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'left',
+        justifyContent: 'left',
         textAlign: 'center',
         wordBreak: 'break-word',
         lineHeight: '1.2',
