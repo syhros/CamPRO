@@ -282,7 +282,7 @@
             }
 
             if (action.category) setReactSelectValue(getCategory(), action.category);
-            if (action.topic) setReactInputValue(getAddSubject(), action.topic);
+            if (action.topic) setReactInputValue(getAddSubject(), `★ ${action.topic} ★`);
             if (action.blurb) setReactInputValue(getReplyTextbox(), action.blurb);
             if (action.status) setReactSelectValue(getStatusDropdown(), action.status);
 
