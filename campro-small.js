@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - TEST
 // @namespace    http://tampermonkey.net/
-// @version      0.3.001.4
+// @version      0.5.001.0
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -11,8 +11,8 @@
 // @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro-small.js
 // ==/UserScript==
 
-// 0.3.001.3 - Major refactor: Added Quick Buttons from CSV, moved Snooze buttons, and increased container size.
-// 0.3.001.4 - Centered button text, added reply-box-click action, fixed double-star issue, and grouped Transfer buttons.
+// 0.4.001.1 - Centered button text, added reply-box-click action, fixed double-star issue, and grouped Transfer buttons.
+// 0.5.001.0 - Re-integrated search functionality.
 
 (function() {
     'use strict';
@@ -36,8 +36,8 @@
     };
 
     const QUICK_BUTTON_STYLES = {
-        height: '50px',
-        width: '65px',
+        height: '30px',
+        width: '50px',
         margin: '2px 4px',
         background: '#444',
         color: 'white',
@@ -47,10 +47,9 @@
         fontSize: '11px',
         transition: 'background-color 0.2s',
         lineHeight: '1.2',
-        // CHANGE 1: Corrected flexbox properties to center the text perfectly
         display: 'flex',
-        alignItems: 'center', // Corrected from 'centre'
-        justifyContent: 'center', // Corrected from 'centre'
+        alignItems: 'center',
+        justifyContent: 'center',
         textAlign: 'center',
     };
 
@@ -65,13 +64,15 @@
         cursor: 'pointer',
         fontSize: '13px',
         transition: 'background-color 0.2s',
-        whiteSpace: 'normal',
+        whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        textAlign: 'left'
     };
 
     // ========== DATA STRUCTURES ==========
 
+    // Data for Quick Buttons
     const quickButtonData = [
         { "category": "", "subcategory": "FC See below", "topic": "", "subtopic": "", "action": "Resolve", "blurb": "Hello All - @FC, Please be advised on below.\nClosing case.", "status": "Resolved", "snoozeTime": "", "buttonName": "FCSB", "buttonLabel": "FC See below", "parentButton": "" },
         { "category": "", "subcategory": "Carrier See below", "topic": "", "subtopic": "", "action": "Resolve", "blurb": "Hello All - @Carrier, Please be advised on below.\nClosing case.", "status": "Resolved", "snoozeTime": "", "buttonName": "CSB", "buttonLabel": "Carrier See below", "parentButton": "" },
@@ -151,13 +152,12 @@
                     name: item.buttonName,
                     label: item.buttonLabel,
                     action: {
-                        type: item.action, // Pass action type for filtering
+                        type: item.action,
                         blurb: item.blurb || null,
                         status: item.status ? item.status.replace('\n', '') : null,
                         snooze: item.snoozeTime ? parseFloat(item.snoozeTime) : null,
                         category: item.category || null,
-                        // CHANGE 3: Store raw topic, remove star formatting here
-                        topic: item.topic || null,
+                        topic: item.topic || null
                     }
                 });
             }
@@ -171,13 +171,12 @@
                     isParent: !!nestedButtons[item.buttonName],
                     children: nestedButtons[item.buttonName] || [],
                     action: {
-                        type: item.action, // Pass action type for filtering
+                        type: item.action,
                         blurb: item.blurb || null,
                         status: item.status ? item.status.replace('\n', '') : null,
                         snooze: item.snoozeTime ? parseFloat(item.snoozeTime) : null,
                         category: item.category || null,
-                        // CHANGE 3: Store raw topic, remove star formatting here
-                        topic: item.topic || null,
+                        topic: item.topic || null
                     }
                 });
             }
@@ -186,6 +185,57 @@
     }
 
     const quickButtons = processQuickButtons(quickButtonData);
+
+    // --- ADDED: Data for Search Functionality (Restored from original script) ---
+    const siteDictionary = { "UK": { "UK": { "FC": ["BHX1", "BHX2", "BHX3", "BHX4", "BHX5", "BRS1", "BRS2", "CWL1", "EMA1", "EMA2", "EUK5", "EUSV", "GLA1", "LBA1", "LBA2", "LBA3", "LBA4", "LCY1", "LCY2", "LCY3", "LCY4", "LTN1", "LTN2", "LTN4", "MAN1", "MAN2", "MAN3", "MAN4", "MME1", "MME2", "NCL1", "PED1", "SOU1", "STN1", "SWN1", "TIL1", "XUKA", "XUKB", "XUKC", "XUKD", "XUKE", "XUKF", "XUKG", "XUKH", "XUKI", "XUKJ", "XUKK", "XUKL", "XUKM", "XUKN", "XUKO", "XUKP", "XUKQ", "XUKR", "XUKS", "XUKT", "XUKU", "XUKV", "XUKW", "XUKX", "XUKY", "XUKZ", "LPL1"], "SC": ["DSC1", "DSC2", "DSC3"], "IXD": ["IXD1"], "ATS": ["ATSF"] } }, "CE": { "PL": { "FC": ["KTW1", "LCJ1", "LCJ2", "LCJ3", "POZ1", "POZ2", "SZZ1", "WRO1", "WRO2", "WRO3", "WRO4"], "SC": ["DSZ1", "DSZ2"], "IXD": ["IXDPL"], "AMZL": ["WAW1", "KRK1", "WRO5", "LOD1"] }, "CZ": { "FC": ["PRG1", "PRG2"], "SC": ["DSCZ"], "IXD": ["IXDCZ"] }, "DE": { "FC": ["BER3", "BER6", "BEY8", "CGN1", "DTM1", "DTM2", "DUS2", "DUS4", "EDE4", "EDE5", "FRA1", "FRA3", "FRA7", "HAM2", "HAU2", "LEJ1", "LEJ2", "LEJ3", "LEJ5", "MUC3", "PAD1", "PAD2", "STR1", "WRO5", "XDEB", "XDEC", "XDED", "XDEE", "XDEF", "XDEG", "XDEH", "XDEI", "XDEJ", "XDEK", "XDEL", "XDEM", "XDEN", "XDEO", "XDEP", "XDEQ", "XDER", "XDES", "XDET", "XDEU", "XDEV", "XDEW", "XDEX", "XDEY", "XDEZ", "XDEZA"], "SC": ["DEDS"], "IXD": ["IXDDE"] } }, "SEU": { "FR": { "FC": ["ORY1", "ORY4", "LIL1", "LYS1", "MRS1", "MRS3", "BVA1", "CDG7"], "SC": ["DSF1", "DSF2"], "IXD": ["IXDFR"] }, "IT": { "FC": ["FCO1", "FCO2", "FCO5", "MXP3", "MXP5", "TRN1"], "SC": ["DIT1", "DIT2"], "IXD": ["IXDIT"] }, "ES": { "FC": ["BCN1", "BCN2", "BCN3", "BCN8", "MAD4", "MAD6", "MAD8", "SVQ1"], "SC": ["DES1", "DES2"], "IXD": ["IXDES"] } } };
+    let siteAttributes = {};
+    for (const [region, countries] of Object.entries(siteDictionary)) {
+        for (const [country, types] of Object.entries(countries)) {
+            for (const [type, sites] of Object.entries(types)) {
+                sites.forEach(site => { siteAttributes[site] = { region, country, type }; });
+            }
+        }
+    };
+    const categoriesDictionary = { "General": { "Carrier Raised": { "Lateness": { "My truck is late": ["", "Hello All - @Carrier, What is your ETA?", { "snooze": 0.5, "status": "Pending Carrier Action" }], "Traffic": ["", "Hello All - @Carrier, What is your ETA?", { "snooze": 0.5, "status": "Pending Carrier Action" }], "Breakdown": ["", "Hello All - @Carrier, What is your ETA?", { "snooze": 0.5, "status": "Pending Carrier Action" }] }, "Arrival": { "Arrived": ["", "Hello All - VRID has arrived", {}] } } } };
+    const buttonActions = generateButtonActions(categoriesDictionary);
+
+    // --- ADDED: Functions for Search Functionality ---
+    function generateButtonActions(categoriesDict) {
+        const actions = [];
+        for (const [category, subcats] of Object.entries(categoriesDict)) {
+           for (const [subcategory, topics] of Object.entries(subcats)) {
+                const raisedBy = subcategory.toLowerCase().includes('site') ? 'Site' : subcategory.toLowerCase().includes('carrier') ? 'Carrier' : 'Other';
+                const siteInput = raisedBy === 'Site';
+                for (const [topic, blurbs] of Object.entries(topics)) {
+                   for (const [blurbName, blurbData] of Object.entries(blurbs)) {
+                        const settings = blurbData[2] || {};
+                        actions.push({
+                            category, subcategory, topic, blurbName, sop: blurbData[0], blurb: blurbData[1], raisedBy, siteInput,
+                            snooze: settings.snooze || null, status: settings.status || null
+                        });
+                   }
+                }
+            }
+        }
+        return actions;
+    }
+
+    function searchActions(query) {
+        if (!query) return [];
+        const searchTerms = query.toLowerCase().trim().split(/\s+/);
+        return buttonActions.filter(action => {
+            const searchableText = [action.category, action.subcategory, action.topic, action.blurbName, action.sop, action.blurb].map(text => (text || '').toLowerCase()).join(' ');
+            return searchTerms.every(term => searchableText.includes(term));
+        });
+    }
+
+    function buildSubject(site, topic) {
+        const attr = siteAttributes[site] || {};
+        if (attr.region === 'UK') {
+            return `★ [${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+        }
+        return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+    }
 
     // ========== DOM & ACTION HELPERS ==========
     function applyStyles(element, styles) { Object.assign(element.style, styles); }
@@ -227,7 +277,7 @@
      */
     async function handleQuickButtonAction(action) {
         try {
-            // CHANGE 2: Ensure the reply section is open before proceeding.
+            // Ensure the reply section is open before proceeding.
             if (!getReplyTextbox()) {
                 const replyButton = getReplyButton();
                 if (replyButton) {
@@ -238,7 +288,7 @@
 
             if (action.category) setReactSelectValue(getCategory(), action.category);
 
-            // CHANGE 3: Add star formatting here to prevent double-stars
+            // Add star formatting here to prevent double-stars
             if (action.topic) {
                 setReactInputValue(getAddSubject(), `★ ${action.topic} ★`);
             }
@@ -269,6 +319,54 @@
         }
     }
 
+    // --- ADDED: Action Handler for Search Results ---
+    async function handleSearchButtonAction(action) {
+        try {
+            let subject = action.topic;
+            if (action.siteInput) {
+                const site = prompt("Enter site code (e.g. BHX1):");
+                if (!site) return;
+                subject = buildSubject(site.toUpperCase(), action.topic);
+            } else {
+                subject = `★ ${action.topic} ★`;
+            }
+
+            if (!getReplyTextbox()) {
+                const replyButton = getReplyButton();
+                if (replyButton) {
+                    replyButton.click();
+                    await delay(300);
+                }
+            }
+
+            setReactSelectValue(getCategory(), action.category);
+            setReactInputValue(getAddSubject(), subject);
+            setReactInputValue(getReplyTextbox(), action.blurb);
+            if(action.status) setReactSelectValue(getStatusDropdown(), action.status);
+
+            if (action.snooze) {
+                 if (!getFollowUpDatetime()) {
+                   const followUpButton = getFollowUpButton();
+                   if (followUpButton) {
+                        followUpButton.click();
+                        await delay(300);
+                   }
+                }
+                const followUpDatetime = getFollowUpDatetime();
+                if (followUpDatetime) {
+                    let date = new Date();
+                    date.setTime(date.getTime() + action.snooze * 60 * 60 * 1000);
+                    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                    setReactInputValue(followUpDatetime, formattedDate);
+                }
+            }
+            showPopup(`Applied: ${subject}`);
+        } catch (error) {
+            console.error('CamPRO: Error applying search action:', error);
+            showPopup('Error applying action. Please try again.', true);
+        }
+    }
+
 
     // ========== UI CREATION ==========
     function showPopup(message, isError = false) {
@@ -290,9 +388,6 @@
         }, 2000);
     }
 
-    /**
-     * Injects snooze buttons above the reply textarea inside the iframe.
-     */
     function injectSnoozeButtons() {
         const maxAttempts = 20;
         let attempt = 0;
@@ -338,14 +433,10 @@
         }, 500);
     }
 
-    /**
-     * Creates the main UI container with quick buttons and search functionality.
-     */
     function createMainContainer() {
         const container = document.createElement('div');
         applyStyles(container, CONTAINER_STYLES);
 
-        // CHANGE 4: Create a main flex container to hold all button groups
         const buttonsFlexContainer = document.createElement('div');
         applyStyles(buttonsFlexContainer, {
             display: 'flex',
@@ -356,39 +447,24 @@
         });
         container.appendChild(buttonsFlexContainer);
 
-        // Separate buttons into standard and transfer types
         const standardButtons = quickButtons.filter(b => b.action.type !== 'Transfer');
         const transferButtons = quickButtons.filter(b => b.action.type === 'Transfer');
 
-        // --- Create a grid for Standard Buttons ---
         const standardButtonGrid = document.createElement('div');
         applyStyles(standardButtonGrid, { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '70vw' });
         buttonsFlexContainer.appendChild(standardButtonGrid);
 
-        // --- Create the "Transfers" group using a fieldset ---
         const transferGroup = document.createElement('fieldset');
-        applyStyles(transferGroup, {
-            border: '1px solid #777',
-            borderRadius: '5px',
-            padding: '10px 5px 5px 5px',
-            minWidth: '200px'
-        });
+        applyStyles(transferGroup, { border: '1px solid #777', borderRadius: '5px', padding: '10px 5px 5px 5px', minWidth: '200px' });
         const transferLegend = document.createElement('legend');
         transferLegend.textContent = 'Transfers';
-        applyStyles(transferLegend, {
-            padding: '0 5px',
-            color: '#ccc',
-            fontSize: '12px',
-            textAlign: 'center',
-            width: 'auto'
-        });
+        applyStyles(transferLegend, { padding: '0 5px', color: '#ccc', fontSize: '12px', textAlign: 'center', width: 'auto' });
         transferGroup.appendChild(transferLegend);
         const transferButtonGrid = document.createElement('div');
         applyStyles(transferButtonGrid, { display: 'flex', flexWrap: 'wrap', justifyContent: 'center' });
         transferGroup.appendChild(transferButtonGrid);
         buttonsFlexContainer.appendChild(transferGroup);
 
-        // --- Function to create and append a single button ---
         const createButton = (buttonDef, parentGrid) => {
             const button = document.createElement('button');
             button.innerHTML = buttonDef.name.replace(/ (-|S|C)$/, '<br>$1').replace(' ', '<br>');
@@ -397,27 +473,18 @@
 
             if (buttonDef.isParent) {
                 const childrenContainer = document.createElement('div');
-                childrenContainer.style.display = 'none'; // Initially hidden
-                childrenContainer.style.position = 'absolute';
-                childrenContainer.style.bottom = '150px'; // Position above the main bar
-                childrenContainer.style.left = '50%';
-                childrenContainer.style.transform = 'translateX(-50%)';
-                childrenContainer.style.background = '#2a2a2a';
-                childrenContainer.style.padding = '5px';
-                childrenContainer.style.borderRadius = '5px';
-                childrenContainer.style.boxShadow = '0 -2px 10px rgba(0,0,0,0.5)';
-                childrenContainer.style.zIndex = '9999';
-                childrenContainer.style.gap = '5px';
+                childrenContainer.id = `children-container-${buttonDef.name.replace(/ /g, '')}`;
+                applyStyles(childrenContainer, { display: 'none', position: 'absolute', bottom: '150px', left: '50%', transform: 'translateX(-50%)', background: '#2a2a2a', padding: '5px', borderRadius: '5px', boxShadow: '0 -2px 10px rgba(0,0,0,0.5)', zIndex: '9999', gap: '5px' });
 
                 buttonDef.children.forEach(childDef => {
                     const childButton = document.createElement('button');
-                    childButton.textContent = childDef.label; // Show full label for children
+                    childButton.textContent = childDef.label;
                     childButton.title = childDef.label;
                     applyStyles(childButton, QUICK_BUTTON_STYLES);
                     Object.assign(childButton.style, { width: 'auto', padding: '8px 12px', whiteSpace: 'nowrap' });
                     childButton.onclick = () => {
                         handleQuickButtonAction(childDef.action);
-                        childrenContainer.style.display = 'none'; // Hide after click
+                        childrenContainer.style.display = 'none';
                     };
                     childrenContainer.appendChild(childButton);
                 });
@@ -425,7 +492,7 @@
 
                 button.onclick = () => {
                     const isHidden = childrenContainer.style.display === 'none';
-                    document.querySelectorAll('[id^=children-container]').forEach(c => c.style.display = 'none'); // Hide all others
+                    document.querySelectorAll('[id^=children-container]').forEach(c => { c.style.display = 'none'; });
                     childrenContainer.style.display = isHidden ? 'flex' : 'none';
                 };
             } else {
@@ -434,11 +501,70 @@
             parentGrid.appendChild(button);
         };
 
-        // Populate the grids with their respective buttons
         standardButtons.forEach(btn => createButton(btn, standardButtonGrid));
         transferButtons.forEach(btn => createButton(btn, transferButtonGrid));
 
-        // --- Toggle Button ---
+        // --- ADDED: Search UI Elements ---
+        const searchBox = document.createElement('input');
+        searchBox.type = 'text';
+        searchBox.placeholder = 'Search categories, topics, blurbs...';
+        applyStyles(searchBox, {
+            width: '30%',
+            minWidth: '200px',
+            padding: '8px 12px',
+            border: '1px solid #444',
+            borderRadius: '4px',
+            background: '#333',
+            color: '#fff',
+            position: 'absolute',
+            right: '20px',
+            bottom: '5px',
+            height: '36px'
+        });
+        container.appendChild(searchBox);
+
+        const searchResultsContainer = document.createElement('div');
+        applyStyles(searchResultsContainer, {
+            display: 'none',
+            flexDirection: 'column-reverse',
+            gap: '4px',
+            width: '30%',
+            minWidth: '200px',
+            maxHeight: '160px',
+            overflowY: 'auto',
+            position: 'absolute',
+            right: '20px',
+            bottom: '45px', // Position above the search bar
+            background: '#1f1f1f',
+            borderRadius: '4px',
+            boxShadow: '0 -2px 10px rgba(0,0,0,0.3)',
+            zIndex: '9999'
+        });
+        container.appendChild(searchResultsContainer);
+
+        searchBox.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            searchResultsContainer.innerHTML = '';
+            if (query) {
+                searchResultsContainer.style.display = 'flex';
+                const results = searchActions(query);
+                results.forEach(action => {
+                    const button = document.createElement('button');
+                    button.textContent = `${action.subcategory} > ${action.topic} > ${action.blurbName}`;
+                    applyStyles(button, SEARCH_BUTTON_STYLES);
+                    Object.assign(button.style, { width: '100%', height: 'auto', minHeight: '40px', padding: '8px 12px'});
+                    button.onclick = () => {
+                        handleSearchButtonAction(action);
+                        searchResultsContainer.style.display = 'none'; // Hide results after click
+                    };
+                    searchResultsContainer.appendChild(button);
+                });
+            } else {
+                searchResultsContainer.style.display = 'none';
+            }
+        });
+
+
         const toggleBtn = document.createElement('button');
         toggleBtn.textContent = '▲';
         toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:4px 4px 0 0;padding:4px 12px;cursor:pointer;z-index:10001;';
