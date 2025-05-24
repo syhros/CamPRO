@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         CamPRO - WIMS Enhancer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.016.30
-// @description  Streamlines WIMS case management with quick action buttons
+// @version      0.3.001.00
+// @description  Streamlines WIMS case management with quick action buttons and improved UI
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
 // @grant        none
@@ -11,6 +11,7 @@
 // @downloadURL  https://raw.githubusercontent.com/syhros/CamPRO/refs/heads/main/campro.js
 // ==/UserScript==
 
+// 0.3.001.00 - Added Quick Buttons (Assign, Placeholder Resolve), Debounced Search, Corrected container error, Used padStart, Minor refactoring by Gemini
 // 0.2.013 - Testing subject = `★ ${action.topic} ★`; for carrier raised cases
 // 0.2.016 - Snooze button added
 // 0.2.016.5 - Minor snooze button update
@@ -26,18 +27,18 @@
         bottom: '0',
         left: '0',
         width: '100vw',
-        height: '70px',
         background: '#1f1f1f',
-        padding: '0',
+        padding: '10px 0 0 0', // Added padding top
         display: 'flex',
+        flexDirection: 'column', // Changed to column for better layout of internal containers
         alignItems: 'center',
         zIndex: '9998',
         boxShadow: '0 -2px 10px rgba(0,0,0,0.3)',
         transition: 'transform 0.3s',
-        height: 'auto'
+        height: 'auto' // Keep auto for content
     };
 
-    const BUTTON_STYLES = {
+    const BUTTON_STYLES = { // General style for action buttons from search
         flex: '1 1 0',
         height: '90%',
         margin: '0 4px',
@@ -53,25 +54,22 @@
         textOverflow: 'ellipsis',
     };
 
-    const POPUP_STYLES = {
-        position: 'fixed',
-        bottom: '80px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: '#222',
+    const CONTROL_BUTTON_STYLES = { // For Snooze and Quick Action buttons
+        padding: '6px 10px',
+        minWidth: '30px',
+        height: '30px',
+        background: '#444',
         color: '#fff',
-        borderRadius: '8px',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-        zIndex: '10000',
-        minWidth: '600px',
-        maxWidth: '90vw',
-        padding: '24px 16px',
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '16px',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '13px',
+        margin: '0 3px', // Added margin for spacing
         display: 'flex',
-        flexDirection: 'row',
-        gap: '24px',
+        alignItems: 'center',
+        justifyContent: 'center'
     };
+
 
     // ========== DATA STRUCTURE EXAMPLES ==========
     // Mapping of every category, site and emails.
@@ -162,8 +160,6 @@
         },
     };
 
-
-
     // Each button can have multiple actions (for popup), each with raisedBy, blurb, snooze, etc.
     const buttonActions = generateButtonActions(categoriesDictionary);
 
@@ -187,22 +183,22 @@
                         actions.push({
                             category,
                             subcategory,
-                        topic,
-                        blurbName,
-                        sop: blurbData[0],
-                        blurb: blurbData[1],
-                        raisedBy,
-                        siteInput,
-                        // Add optional settings
-                        snooze: settings.snooze || null,
-                        status: settings.status || null
-                    });
+                            topic,
+                            blurbName,
+                            sop: blurbData[0],
+                            blurb: blurbData[1],
+                            raisedBy,
+                            siteInput,
+                            // Add optional settings
+                            snooze: settings.snooze || null,
+                            status: settings.status || null
+                        });
+                    }
                 }
             }
         }
+        return actions;
     }
-    return actions;
-}
 
     // ========== DOM HELPERS ==========
     function applyStyles(element, styles) {
@@ -210,7 +206,7 @@
     }
 
     // ========== ELEMENT GETTERS ==========
-    function getElement(document, path) {
+    function getElement(doc, path) {
         return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
     }
     function getAddSubjectIframe() {
@@ -241,10 +237,13 @@
         return doc ? getElement(doc, "//input[@name='dueDate' and @type='datetime-local']") : null;
     }
     function getAssignButton() {
-        return getElement(document, "//button[text()='Assign to me']");
+        // Attempt to find the button by its text content. This might need adjustment if the text changes.
+        return getElement(document, "//button[normalize-space()='Assign to me']");
     }
     function getReplyToCase() {
         const doc = getAddSubjectIframeDoc();
+        // This selector might be too generic. If there are multiple inputs with this placeholder, it could fail.
+        // Consider a more specific selector if possible.
         return doc ? getElement(doc, "//input[@placeholder='Reply to this case...']") : null;
     }
     function getReplyButton() {
@@ -253,7 +252,6 @@
     }
     function getFollowUpButton() {
         const addSubjectIframeDoc = getAddSubjectIframeDoc();
-
         return getElement(addSubjectIframeDoc, "//a[text()='Case Follow Up']");
     };
 
@@ -263,7 +261,7 @@
         let lastValue = input.value;
         input.value = value;
         let event = new Event('input', { bubbles: true });
-        event.simulated = true;
+        // event.simulated = true; // Not strictly necessary for all React versions but can be useful
         let tracker = input._valueTracker;
         if (tracker) {
             tracker.setValue(lastValue);
@@ -272,73 +270,83 @@
     }
     function setReactSelectValue(selectElement, newValue) {
         if (!selectElement) return;
-        let setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
-        setter.call(selectElement, newValue);
+        // For React, directly setting .value and then dispatching 'change' is often enough.
+        // The Object.getOwnPropertyDescriptor approach is more robust for non-React controlled components.
+        selectElement.value = newValue;
         const event = new Event('change', { bubbles: true });
         selectElement.dispatchEvent(event);
     }
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // ========== MAIN BUTTON ACTION ==========
+    // ========== MAIN BUTTON ACTION (from search results) ==========
     async function handleButtonAction(action) {
         try {
             let subject = action.topic;
             if (action.siteInput) {
-                // Prompt for site code
                 const site = prompt("Enter site code (e.g. BHX1):");
-                if (!site) return;
+                if (!site) return; // User cancelled prompt
                 subject = buildSubject(site.toUpperCase(), action.topic);
             } else {
                 subject = `★ ${action.topic} ★`;
             }
 
-            // Open reply
-            const replyToCase = getReplyToCase();
-            if (replyToCase) {
-                replyToCase.focus();
-                await delay(300);
+            // Ensure reply area is active
+            const replyToCaseInput = getReplyToCase();
+            if (replyToCaseInput) {
+                replyToCaseInput.focus();
+                await delay(100); // Short delay for focus
             }
+
             const replyButton = getReplyButton();
             if (replyButton) {
                 replyButton.click();
-                await delay(300);
+                await delay(300); // Wait for reply fields to appear/become active
+            } else {
+                // Fallback if replyButton isn't found (e.g., already in reply mode)
+                // Check if reply fields are already visible
+                if (!getReplyTextbox()) {
+                    showPopup('Could not activate reply area.', true);
+                    return;
+                }
             }
+
             // Set fields
-            const category = getCategory();
-            if (category) setReactSelectValue(category, action.category);
+            const categorySelect = getCategory();
+            if (categorySelect) setReactSelectValue(categorySelect, action.category);
+
             const subjectInput = getAddSubject();
             if (subjectInput) setReactInputValue(subjectInput, subject);
+
             const replyTextBox = getReplyTextbox();
             if (replyTextBox) setReactInputValue(replyTextBox, action.blurb);
+
             const statusDropdown = getStatusDropdown();
-            if (statusDropdown) setReactSelectValue(statusDropdown, action.status);
+            if (statusDropdown && action.status) setReactSelectValue(statusDropdown, action.status);
 
             // Set snooze if needed
             if (action.snooze) {
                 const followUpDatetime = getFollowUpDatetime();
                 if (followUpDatetime) {
-                    function pad(number) { return (number < 10) ? '0' + number : number; }
                     let date = new Date();
                     date.setTime(date.getTime() + action.snooze * 60 * 60 * 1000);
-                    const formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
                     setReactInputValue(followUpDatetime, formattedDate);
+                } else {
+                    showPopup('Follow-up date field not found for snooze.', true);
                 }
             }
-            // Show confirmation
             showPopup(`Applied: ${subject}`);
         } catch (error) {
             console.error('Error applying action:', error);
-            showPopup('Error applying action. Please try again.', true);
+            showPopup('Error applying action. Check console for details.', true);
         }
     }
 
     // ========== SIMPLE POPUP ==========
     function showPopup(message, isError = false) {
-        // Remove any existing popup
         const existingPopup = document.querySelector('.wims-enhancer-popup');
         if (existingPopup) existingPopup.remove();
 
-        // Create popup
         const popup = document.createElement('div');
         popup.classList.add('wims-enhancer-popup');
         Object.assign(popup.style, {
@@ -346,262 +354,368 @@
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            padding: '35px',
+            padding: '25px 35px', // Adjusted padding
             background: '#000000',
             color: '#ffffff',
-            borderLeft: isError ? '4px solid #F44336' : '4px solid #2196F3',
-            borderRadius: '4px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-            zIndex: '9999',
-            fontFamily: 'Arial, sans-serif',
-            minWidth: '400px',
-            maxWidth: '800px',
-            fontSize: '16px',
+            borderLeft: isError ? '5px solid #F44336' : '5px solid #2196F3', // Thicker border
+            borderRadius: '6px', // Slightly more rounded
+            boxShadow: '0 5px 15px rgba(0,0,0,0.3)', // Enhanced shadow
+            zIndex: '10001', // Ensure it's above other elements like the action bar
+            fontFamily: '"Amazon Ember", Arial, sans-serif', // Match Amazon font if possible
+            minWidth: '350px',
+            maxWidth: '600px',
+            fontSize: '15px',
+            textAlign: 'center', // Center text
+            opacity: '0', // Start transparent for fade-in
+            transition: 'opacity 0.3s ease-in-out'
         });
         popup.textContent = message;
         document.body.appendChild(popup);
 
+        // Fade in
+        setTimeout(() => { popup.style.opacity = '1'; }, 50);
+
+        // Fade out and remove
         setTimeout(() => {
             popup.style.opacity = '0';
-            popup.style.transition = 'opacity 0.5s';
-            setTimeout(() => popup.remove(), 500);
-        }, 2000);
+            setTimeout(() => popup.remove(), 300); // Wait for fade out transition
+        }, 2500); // Popup visible for 2.5 seconds
     }
 
-// ========== UI CREATION ==========
-function searchActions(query) {
-    if (!query) return [];
+    // ========== UI CREATION ==========
+    function searchActions(query) {
+        if (!query) return [];
+        const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
+        if (searchTerms.length === 0) return [];
 
-    const searchTerms = query.toLowerCase().trim().split(/\s+/);
+        return buttonActions.filter(action => {
+            const searchableText = [
+                action.category,
+                action.subcategory,
+                action.topic,
+                action.blurbName,
+                action.sop,
+                action.blurb
+            ].map(text => (text || '').toLowerCase()).join(' ');
+            return searchTerms.every(term => searchableText.includes(term));
+        }).sort((a, b) => {
+            const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
+            const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
+            let aScore = 0;
+            let bScore = 0;
+            searchTerms.forEach(term => {
+                if (aText.startsWith(term)) aScore++;
+                if (bText.startsWith(term)) bScore++;
+            });
+            return bScore - aScore; // Higher score first
+        });
+    }
 
-    return buttonActions.filter(action => {
-        const searchableText = [
-            action.category,
-            action.subcategory,
-            action.topic,
-            action.blurbName,
-            action.sop,
-            action.blurb
-        ].map(text => (text || '').toLowerCase()).join(' ');
+    function createStyledButton(text, title, styles, onClickAction) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        if (title) button.title = title;
+        applyStyles(button, styles);
+        button.onclick = onClickAction;
+        return button;
+    }
 
-        return searchTerms.every(term => searchableText.includes(term));
-    }).sort((a, b) => {
-        // Sort by how many search terms match at the start of the text
-        const aText = `${a.category} ${a.subcategory} ${a.topic} ${a.blurbName}`.toLowerCase();
-        const bText = `${b.category} ${b.subcategory} ${b.topic} ${b.blurbName}`.toLowerCase();
+    function debounce(func, delay) {
+        let timeoutId;
+        return function(...args) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
 
-        let aScore = 0;
-        let bScore = 0;
+    function createButtonContainer() {
+        const mainContainer = document.createElement('div'); // Renamed to avoid conflict
+        applyStyles(mainContainer, CONTAINER_STYLES);
 
-        searchTerms.forEach(term => {
-            if (aText.startsWith(term)) aScore++;
-            if (bText.startsWith(term)) bScore++;
+        // --- Controls Row (Snooze and Quick Actions) ---
+        const controlsRow = document.createElement('div');
+        Object.assign(controlsRow.style, {
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '10px', // Space between snooze and quick action groups
+            marginBottom: '10px',
+            width: '100%', // Take full width for centering
+            padding: '0 10px' // Padding for the row itself
         });
 
-        return bScore - aScore;
-    });
-}
+        // Snooze container
+        const snoozeContainer = document.createElement('div');
+        Object.assign(snoozeContainer.style, {
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '6px',
+        });
 
-function createButtonContainer() {
-    // Create the main container
-    const container = document.createElement('div');
-    applyStyles(container, CONTAINER_STYLES);
+        const snoozeButtons = [
+            { label: '15m', hours: 0.25 }, { label: '30m', hours: 0.5 },
+            { label: '1h', hours: 1 }, { label: '2h', hours: 2 },
+            { label: '4h', hours: 4 }, { label: '8h', hours: 8 }
+        ];
+        snoozeButtons.forEach(({ label, hours }) => {
+            const button = createStyledButton(label, `Snooze for ${label}`, CONTROL_BUTTON_STYLES, async () => {
+                const replyToCaseInput = getReplyToCase();
+                if (replyToCaseInput) {
+                    replyToCaseInput.focus();
+                    await delay(100);
+                }
+                const followUpButton = getFollowUpButton();
+                if (followUpButton) {
+                    followUpButton.click();
+                    await delay(300);
+                } else {
+                     showPopup('Follow Up button not found.', true); return;
+                }
+                const followUpDatetime = getFollowUpDatetime();
+                if (followUpDatetime) {
+                    const date = new Date();
+                    date.setTime(date.getTime() + hours * 60 * 60 * 1000);
+                    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                    setReactInputValue(followUpDatetime, formattedDate);
+                    showPopup(`Snoozed for ${label}.`);
+                } else {
+                    showPopup('Follow-up date field not found.', true);
+                }
+            });
+            snoozeContainer.appendChild(button);
+        });
+        controlsRow.appendChild(snoozeContainer);
 
-    // Create snooze container
-    const snoozeContainer = document.createElement('div');
-    Object.assign(snoozeContainer.style, {
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '6px',
-        marginBottom: '10px',
-        paddingTop: '10px',
-        paddingLeft: '10px'
-    });
+        // Quick Actions container
+        const quickActionsContainer = document.createElement('div');
+        Object.assign(quickActionsContainer.style, {
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '6px',
+        });
 
-    // Add snooze buttons
-    const snoozeButtons = [
-        { label: '15', hours: 0.25 },
-        { label: '30', hours: 0.5 },
-        { label: '1h', hours: 1 },
-        { label: '2h', hours: 2 },
-        { label: '4h', hours: 4 },
-        { label: '8h', hours: 8 }
-    ];
+        const quickButtons = [
+            {
+                label: 'Assign', title: 'Assign case to me', action: async () => {
+                    const assignBtn = getAssignButton();
+                    if (assignBtn) {
+                        assignBtn.click();
+                        showPopup('Case assigned to me.');
+                    } else {
+                        showPopup("'Assign to me' button not found.", true);
+                    }
+                }
+            },
+            {
+                label: 'Resolve', title: 'Quick resolve (placeholder)', action: async () => {
+                    // Placeholder: Implement actual resolve logic
+                    // e.g., set status to resolved, add a default comment.
+                    // For now, just shows a popup.
+                    showPopup('Quick Resolve clicked (Placeholder - implement action).');
+                    // Example:
+                    // const statusDropdown = getStatusDropdown();
+                    // if (statusDropdown) setReactSelectValue(statusDropdown, 'Resolved');
+                    // const replyTextBox = getReplyTextbox();
+                    // if (replyTextBox) setReactInputValue(replyTextBox, "Case resolved as per SOP X.");
+                    // Then potentially click a "Submit" or "Update" button.
+                }
+            }
+            // Add more quick buttons here
+        ];
 
-    snoozeButtons.forEach(({ label, hours }) => {
-    const button = document.createElement('button');
-    button.textContent = label;
-    button.title = `Sets to 'Reply follow up' and adds ${label} snooze time`;
-    Object.assign(button.style, {
-        padding: '4px',
-        width: '30px',
-        height: '30px',
-        background: '#444',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '14px'
-    });
-    button.onclick = async () => {
-        // First click the reply box
-        const replyToCase = getReplyToCase();
-        if (replyToCase) {
-            replyToCase.focus();
-            await delay(300); // Wait for field to register click
-        }
+        quickButtons.forEach(({ label, title, action }) => {
+            const button = createStyledButton(label, title, CONTROL_BUTTON_STYLES, action);
+            quickActionsContainer.appendChild(button);
+        });
+        controlsRow.appendChild(quickActionsContainer);
+        mainContainer.appendChild(controlsRow);
 
-        // Then click the Follow Up button
-        const followUpButton = getFollowUpButton();
-        if (followUpButton) {
-            followUpButton.click();
-            await delay(300); // Wait for follow up time field to appear
-        }
 
-        // Finally set the follow up datetime
-        const followUpDatetime = getFollowUpDatetime();
-        if (followUpDatetime) {
-            const date = new Date();
-            date.setTime(date.getTime() + hours * 60 * 60 * 1000);
-            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-            setReactInputValue(followUpDatetime, formattedDate);
-        }
-    };
-    snoozeContainer.appendChild(button);
+        // --- Search Area ---
+        const searchAreaContainer = document.createElement('div');
+        Object.assign(searchAreaContainer.style, {
+            position: 'relative', // For positioning buttonsContainer
+            width: '40%',
+            minWidth: '300px', // Ensure it's usable on smaller views
+            maxWidth: '600px',
+            margin: '0 auto', // Center the search area
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+        });
 
-    // Create quick container
-    const quickContainer = document.createElement('div');
-    Object.assign(quickContainer.style, {
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '6px',
-        marginBottom: '10px',
-        paddingTop: '10px',
-        paddingLeft: '10px'
-    });
+        const searchBox = document.createElement('input');
+        searchBox.type = 'text';
+        searchBox.placeholder = 'Search categories, topics, blurbs...';
+        Object.assign(searchBox.style, {
+            width: '100%', // Take full width of searchAreaContainer
+            padding: '10px 12px', // Increased padding
+            border: '1px solid #555', // Darker border
+            borderRadius: '4px',
+            background: '#333',
+            color: '#fff',
+            height: '40px', // Increased height
+            fontSize: '14px',
+            boxSizing: 'border-box' // Include padding and border in the element's total width and height
+        });
+        searchAreaContainer.appendChild(searchBox);
 
-    // Add snooze buttons
-    const quickButtons = [
-        { label: 'Test',}
-        ]
-    
-    quickContainer.appendChild(button);
+        const buttonsContainer = document.createElement('div'); // For search results
+        Object.assign(buttonsContainer.style, {
+            display: 'flex',
+            flexDirection: 'column', // Results stack vertically
+            gap: '4px',
+            width: '100%', // Match search box width
+            maxHeight: '160px', // Limit height, make scrollable
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            background: '#2a2a2a', // Slightly different background for results
+            borderRadius: '0 0 4px 4px', // Rounded bottom corners
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            marginTop: '0px', // Attach directly below search box
+            // Visibility will be handled by search logic (clearing/populating)
+        });
+        searchAreaContainer.appendChild(buttonsContainer);
+        mainContainer.appendChild(searchAreaContainer);
 
-    const container = document.createElement('div');
-    applyStyles(container, CONTAINER_STYLES);
-});
 
-    // Add search box
-    const searchBox = document.createElement('input');
-    searchBox.type = 'text';
-    searchBox.placeholder = 'Search categories, topics, blurbs...';
-    Object.assign(searchBox.style, {
-        width: '40%',
-        minWidth: '25%',
-        padding: '8px 12px',
-        border: '1px solid #444',
-        borderRadius: '4px',
-        background: '#333',
-        color: '#fff',
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        height: '36px',
-        position: 'absolute',
-        right : '20px'
-    });
-
-    // Create buttons container with horizontal scroll
-    const buttonsContainer = document.createElement('div');
-    Object.assign(buttonsContainer.style, {
-        display: 'flex',
-        flexDirection: 'column-reverse',
-        gap: '4px',
-        width: '40%',
-        maxHeight: '160px',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        marginTop: '-165px',
-        position: 'absolute',
-        right: '20px',
-        bottom: '100%',
-        background: '#1f1f1f',
-        borderRadius: '4px',
-        boxShadow: '0 -2px 10px rgba(0,0,0,0.3)'
-    });
-
-    // Update button styles to have minimum width
-    const UPDATED_BUTTON_STYLES = {
-        ...BUTTON_STYLES,
-        width: '100%',
-        flex: '0 0 auto',
-        height: '40px',
-        margin: '0px',
-        padding: '8px 12px',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        textAlign: 'left'
-    };
-
-    // Search functionality (keep existing search event listener)
-    searchBox.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-
-        let searchTimeout;
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            buttonsContainer.innerHTML = '';
-
+        const debouncedSearch = debounce((query) => {
+            buttonsContainer.innerHTML = ''; // Clear previous results
             if (query) {
                 const results = searchActions(query);
-                results.forEach(action => {
-                    const button = document.createElement('button');
-                    button.textContent = `${action.subcategory} > ${action.topic} > ${action.blurbName}`;
-                    applyStyles(button, UPDATED_BUTTON_STYLES);
-                    button.onclick = () => handleButtonAction(action);
-                    buttonsContainer.appendChild(button);
-                });
+                if (results.length === 0) {
+                    const noResultsMsg = document.createElement('div');
+                    noResultsMsg.textContent = 'No actions found.';
+                    Object.assign(noResultsMsg.style, { padding: '10px', color: '#888', textAlign: 'center'});
+                    buttonsContainer.appendChild(noResultsMsg);
+                } else {
+                    results.forEach(action => {
+                        const button = document.createElement('button');
+                        // Shorter text: Topic > Blurb Name
+                        let buttonText = `${action.topic} > ${action.blurbName}`;
+                        if (action.subcategory && !action.subcategory.startsWith("_")) {
+                             buttonText = `${action.subcategory} > ${buttonText}`;
+                        }
+
+                        button.textContent = buttonText;
+                        button.title = `Category: ${action.category}\nSOP: ${action.sop.substring(0,100)}...`; // Add more details to title
+                        applyStyles(button, {
+                            ...BUTTON_STYLES, // Use base styles
+                            width: '100%',    // Full width within results container
+                            flex: '0 0 auto',
+                            height: 'auto',   // Auto height based on content
+                            minHeight: '38px', // Minimum height
+                            margin: '0px',
+                            padding: '8px 12px',
+                            whiteSpace: 'normal', // Allow text to wrap
+                            textAlign: 'left',
+                            background: '#3a3a3a', // Darker button background
+                            borderBottom: '1px solid #4a4a4a' // Separator
+                        });
+                        button.onmouseover = () => button.style.background = '#4f4f4f';
+                        button.onmouseout = () => button.style.background = '#3a3a3a';
+                        button.onclick = () => {
+                            handleButtonAction(action);
+                            searchBox.value = ''; // Clear search box
+                            buttonsContainer.innerHTML = ''; // Clear results
+                        };
+                        buttonsContainer.appendChild(button);
+                    });
+                }
             }
         }, 300);
-    });
 
-    // Hide/show toggle
-    const toggleBtn = document.createElement('button');
-    toggleBtn.textContent = '▲';
-    toggleBtn.style = 'position:absolute;right:8px;top:-28px;background:#444;color:#fff;border:none;border-radius:0 0 6px 6px;padding:4px 12px;cursor:pointer;z-index:10001;';
-    let hidden = false;
-    toggleBtn.onclick = () => {
-        hidden = !hidden;
-        container.style.transform = hidden ? 'translateY(100%)' : 'translateY(0)';
-        toggleBtn.textContent = hidden ? '▼' : '▲';
-    };
+        searchBox.addEventListener('input', (e) => {
+            debouncedSearch(e.target.value.trim());
+        });
+         searchBox.addEventListener('focus', (e) => { // Show recent/all if empty on focus?
+            if(!e.target.value.trim()){
+                 debouncedSearch(''); // Or some default list
+            }
+        });
 
-    container.appendChild(snoozeContainer);
-    container.appendChild(toggleBtn);
-    container.appendChild(searchBox);
-    container.appendChild(buttonsContainer);
-    document.body.appendChild(container);
-}
 
-// ========== INIT ==========
-function init() {
-    createButtonContainer();
-    console.log('Enhanced WIMS Interface: Initialized');
-}
+        // Hide/show toggle for the entire bar
+        const toggleBtn = document.createElement('button');
+        toggleBtn.textContent = '▼'; // Start with bar visible, so toggle to hide
+        Object.assign(toggleBtn.style, {
+            position: 'absolute',
+            right: '10px',
+            top: '-28px', // Position above the bar
+            background: '#444',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px 6px 0 0', // Rounded top
+            padding: '4px 12px',
+            cursor: 'pointer',
+            zIndex: '10001', // Above main container
+            fontSize: '14px'
+        });
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+        let isBarHidden = false; // Initial state: visible
+        mainContainer.style.transform = 'translateY(0)'; // Explicitly set initial state
 
-// ========== SUBJECT BUILDER ==========
-function buildSubject(site, topic) {
-    const attr = siteAttributes[site] || {};
-    if (attr.region === 'UK') {
-        return `★ [${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
+        toggleBtn.onclick = () => {
+            isBarHidden = !isBarHidden;
+            mainContainer.style.transform = isBarHidden ? `translateY(calc(100% - 0px))` : 'translateY(0)'; // 40px is approx height of controls row + padding
+            toggleBtn.textContent = isBarHidden ? '▲' : '▼';
+            if (!isBarHidden) { // If showing, ensure search results are cleared if searchbox is empty
+                 if(!searchBox.value.trim()) buttonsContainer.innerHTML = '';
+            }
+        };
+
+        // Append toggle button to the body so it can be positioned relative to the mainContainer
+        // but still control it. Or, make mainContainer position relative and append toggleBtn to it.
+        // For simplicity, let's make mainContainer relative for toggle button positioning.
+        mainContainer.style.position = 'fixed'; // Already fixed, ensure it's the reference for toggle
+        mainContainer.appendChild(toggleBtn); // Add toggle to mainContainer itself
+
+        document.body.appendChild(mainContainer);
     }
-    return `★ [${attr.region || ''}][${attr.country || ''}][${site}][${attr.type || ''}] ${topic} ★`;
-}
+
+    // ========== INIT ==========
+    function init() {
+        // It's good practice to check if the script should run on the current page,
+        // e.g., by looking for specific elements that indicate it's a WIMS case page.
+        // For now, we assume it's always correct due to @match.
+        if (getAddSubjectIframe()) { // Basic check if we are on a page with the reply widget
+            createButtonContainer();
+            console.log('Enhanced WIMS Interface: Initialized');
+        } else {
+            console.log('Enhanced WIMS Interface: Reply widget not found, not initializing UI.');
+        }
+    }
+
+    // Wait for the DOM to be fully loaded, or if already loaded, run init.
+    // Using document-end should mean DOM is mostly ready, but iframe content might still be loading.
+    // A more robust check might involve waiting for the specific iframe to load.
+    let initAttempts = 0;
+    const maxInitAttempts = 20; // Try for 10 seconds
+    function attemptInit() {
+        initAttempts++;
+        if (getAddSubjectIframeDoc() && getReplyToCase()) { // Check if iframe doc and a key element are ready
+            init();
+        } else if (initAttempts < maxInitAttempts) {
+            setTimeout(attemptInit, 500); // Wait and try again
+        } else {
+            console.log('Enhanced WIMS Interface: Failed to initialize after multiple attempts. Key elements not found.');
+        }
+    }
+
+    if (document.readyState === 'complete') {
+        attemptInit();
+    } else {
+        window.addEventListener('load', attemptInit); // Use window.load to wait for all resources including iframes
+    }
+
+
+    // ========== SUBJECT BUILDER ==========
+    function buildSubject(site, topic) {
+        const attr = siteAttributes[site] || { region: 'N/A', country: 'N/A', type: 'N/A' }; // Provide defaults
+        // Standardize subject format
+        return `★ [${attr.region}][${attr.country}][${site}][${attr.type}] ${topic} ★`;
+    }
 
 })();
