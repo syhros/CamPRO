@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - TEST
 // @namespace    http://tampermonkey.net/
-// @version      0.3.001.2
+// @version      0.3.001.3
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
