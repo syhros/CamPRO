@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CamPRO - TEST
 // @namespace    http://tampermonkey.net/
-// @version      0.3.001.0
+// @version      0.3.001.1
 // @description  Streamlines WIMS case management with quick action buttons
 // @author       camrees
 // @match        https://optimus-internal-eu.amazon.com/*
@@ -165,7 +165,7 @@
                         status: item.status ? item.status.replace('\n', '') : null,
                         snooze: item.snoozeTime ? parseFloat(item.snoozeTime) : null,
                         category: item.category || null,
-                        topic: `${item.subcategory || ''}${item.topic ? ' > ' + item.topic : ''}`.trim() || null
+                        topic: item.topic ? `★ ${item.topic} ★` : null
                     }
                 });
             }
@@ -183,7 +183,7 @@
                         status: item.status ? item.status.replace('\n', '') : null,
                         snooze: item.snoozeTime ? parseFloat(item.snoozeTime) : null,
                         category: item.category || null,
-                        topic: `${item.subcategory || ''}${item.topic ? ' > ' + item.topic : ''}`.trim() || null
+                        topic: item.topic ? `★ ${item.topic} ★` : null
                     }
                 });
             }
