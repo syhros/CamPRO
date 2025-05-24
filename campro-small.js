@@ -23,7 +23,7 @@
         bottom: '0',
         left: '0',
         width: '100vw',
-        height: '140px',
+        height: '80px',
         background: '#1f1f1f',
         padding: '10px 0',
         display: 'flex',
@@ -451,7 +451,7 @@
         const transferButtons = quickButtons.filter(b => b.action.type === 'Transfer');
 
         const standardButtonGrid = document.createElement('div');
-        applyStyles(standardButtonGrid, { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '70vw' });
+        applyStyles(standardButtonGrid, { display: 'flex', flexWrap: 'wrap', justifyContent: 'left', width: '65%' });
         buttonsFlexContainer.appendChild(standardButtonGrid);
 
         const transferGroup = document.createElement('fieldset');
@@ -509,7 +509,7 @@
         searchBox.type = 'text';
         searchBox.placeholder = 'Search categories, topics, blurbs...';
         applyStyles(searchBox, {
-            width: '30%',
+            width: '35%',
             minWidth: '200px',
             padding: '8px 12px',
             border: '1px solid #444',
