@@ -40,7 +40,7 @@
     };
 
     const QUICK_BUTTON_STYLES = {
-        height: '20px',
+        height: '40px',
         width: '50px',
         margin: '2px 4px',
         background: '#444',
@@ -51,8 +51,8 @@
         fontSize: '11px',
         transition: 'background-color 0.2s',
         display: 'flex',
-        alignItems: 'left',
-        justifyContent: 'left',
+        alignItems: 'centre',
+        justifyContent: 'centre',
         textAlign: 'center',
         wordBreak: 'break-word',
         lineHeight: '1.2',
@@ -450,7 +450,7 @@
         applyStyles(quickButtonContainer, { display: 'flex', flexDirection: 'column', gap: '4px' });
 
         const quickButtonGrid = document.createElement('div');
-        applyStyles(quickButtonGrid, { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '90vw' });
+        applyStyles(quickButtonGrid, { display: 'flex', flexWrap: 'wrap', justifyContent: 'left', width: '60%' });
 
         quickButtonContainer.appendChild(quickButtonGrid);
         container.appendChild(quickButtonContainer);
