@@ -403,9 +403,25 @@
         container.appendChild(searchResultsContainer);
 
         searchBox.addEventListener('input', (e) => {
-            // NOTE: The search functionality requires its own data source ('buttonActions')
-            // which was removed from the provided file. It will not work without it.
-            // Add your search data and functions for this to work.
+            const query = e.target.value.trim();
+            searchResultsContainer.innerHTML = '';
+            if (query) {
+                searchResultsContainer.style.display = 'flex';
+                const results = searchActions(query);
+                results.forEach(action => {
+                    const button = document.createElement('button');
+                    button.textContent = `${action.subcategory} > ${action.topic} > ${action.blurbName}`;
+                    applyStyles(button, SEARCH_BUTTON_STYLES);
+                    Object.assign(button.style, { width: '100%', height: 'auto', minHeight: '40px', padding: '8px 12px'});
+                    button.onclick = () => {
+                        handleSearchButtonAction(action);
+                        searchResultsContainer.style.display = 'none'; // Hide results after click
+                    };
+                    searchResultsContainer.appendChild(button);
+                });
+            } else {
+                searchResultsContainer.style.display = 'none';
+            }
         });
 
 
@@ -424,8 +440,6 @@
 
     // ========== INIT ==========
     function init() {
-        // TODO: Paste your 'quickButtonData' array here, for example:
-        // const quickButtonData = [ { category: "...", subcategory: "...", ... }, ... ];
 
         // This line will fail until you add the data above.
         const quickButtons = processQuickButtons(quickButtonData);
